@@ -87,6 +87,7 @@ class SymRep(object):
                         for row in V.T:
                             Qt.append(row)
                         dims.extend([count]*len(np.where(indices==i)[0]))
+                        #dims.append(V.shape[1])
                         count += 1
             Q = np.array(Qt).T
             print('Q \n{}'.format(Q))
@@ -99,10 +100,271 @@ class SymRep(object):
 
         return np.array(Qt).T,dims
 
+    def find_high_symmetry_directions(self,Q=None,dims=None):
+        """ Need to enumerate all subgroups G_i, of P.  
+            Then for each representation, average the action of the subgroup
+            and observe the column space of the result. If it is 1, then there is only 
+            one direction invariant to G_i, and the rest of the equivalent directions can 
+            be found by applying the whole group P. If the high symmetry directions 
+            are mutually orthogonal and span the subspace, then they are chosen as the
+            oriented basis. This will essentially just be a rotation of certain rows/columns
+            of Q. If it is a 2D space such as e2-e3 strain space, then the spanning set of high 
+            symm directions will not form an orthogonal set. In this case just chose as many
+            high symmetry directions that are orthogonal, and get the rest from the 
+            orthogonal complement.
+        
+        """
+        block_rep = [ Q.T @ op @ Q for op in self.full_rep]  
+        for op in block_rep:
+            print(" op in block_rep : \n{}\n".format(op))
+        subgroups = self.find_all_subgroups() 
+        bindex = 0
+        print("dims: {}".format(dims))
+        udims = np.unique(dims)
+        subspaces = []
+        newQ = []
+        tmplistQ = []
+        for udim in udims:
+            vecs = []
+            inds = np.where(dims==udim)[0]
+            print(" inds : {}".format(inds))
+            if len(inds)==1:
+                newQ.append(Q[:,inds].T.flatten())
+                print("newQ : \n{}".format(newQ))
+                bindex+=1
+                continue
+            else:
+                orbits = []
+                sublistQ = []
+                test_rep =[ op[bindex:bindex+len(inds),bindex:bindex+len(inds)] for op in block_rep]
+                for sg in subgroups:
+                    if len(sg)==1:
+                        continue
+                    rey = np.zeros( (len(inds),len(inds)))
+                    for op in sg:
+                        rey += test_rep[op]
+                    rey /= len(sg)
+                    print("averaged over subgroup: \n{}\n".format(rey))
+                    #subspaces.append(rey)
+                    
+                    for col in rey.T:
+                        orbit=[]
+                        print("col : {} ".format(col))
+                        if np.allclose(col,np.zeros(col.shape)):
+                            print("all zeros")
+                            continue
+                        else: 
+                            print("not zero")
+                            for op in test_rep:
+                                v = op @ col.T
+                                v = v / np.linalg.norm(v)
+                                v_in_orbit = False
+                                for t in orbit:
+                                    if np.allclose(v,t):
+                                        v_in_orbit = True
+                                if (len(orbit)==0):
+                                    print(" adding first v")
+                                    orbit.append(v)
+                                elif not v_in_orbit: 
+                                    print("appending v to orbit" )
+                                    orbit.append(v)
+                        orbits.append(orbit)
+                    # end subgroups
+
+                mults = [ len(orbit) for orbit in orbits ]
+                print("mults : {}".format(mults))
+                sorted_mults = np.argsort(mults)[::-1]
+                selected_orbit = None
+                for ind in sorted_mults:
+                    if len(self.full_rep) % mults[ind] == 0:
+                        selected_orbit = ind
+                        break
+                if selected_orbit==None:
+                    print(" ERROR: didn't find a high sym direction with multiplicity that divides group order ")
+                    exit()
+                # this gets all permutations of rep.dimension number of vectors from orbit[selected_orbit] 
+                # Then use the permutations, compute the gram matrix and compare to identity
+                # if identity then they form an orthogonal basis! 
+                # if not, then just get an orthogonal complement.
+                orthog_basis = None
+                print("selected_orbit : {}".format(selected_orbit))
+                print("orbits : \n{}".format(orbits))
+                for basis_inds in list(itertools.permutations(list(range(0,mults[selected_orbit])),len(inds))):
+                    print("basis_inds: {}".format(basis_inds))
+                    print("orbit[selected_orbit]: \n{}\n".format(orbits[selected_orbit]))
+                    tmp_array = []
+                    for i in basis_inds:
+                        tmp_array.append(orbits[selected_orbit][i])
+                    b = np.array(tmp_array)
+                    if np.allclose(b @ b.T,np.eye(b.shape[0])):
+                        orthog_basis = b
+                        print(" orthog_basis : \n{}".format(orthog_basis))
+                        print(" orthog_basis @ orthog_basis.T: \n{}".format(orthog_basis @ orthog_basis.T))
+                        break
+                         
+                if orthog_basis is None:
+                    u,s,vh = np.linalg.svd(orbits[selected_orbit][0][:,None])
+                    W = u[:,1:]
+                    print("orbits[selected_orbit][0][:,None] :\n{}".format(orbits[selected_orbit][0][:,None]))
+                    print("W : \n{}".format(W))
+                    orthog_basis = np.hstack((orbits[selected_orbit][0][:,None],W))  
+                    print(" orthog_basis : \n{}".format(orthog_basis))
+                    print(" orthog_basis @ orthog_basis.T: \n{}".format(orthog_basis @ orthog_basis.T))
+                
+                Q_basis = orthog_basis.T @ Q[:,inds].T
+                print("Q_basis : \n{}".format(Q_basis))
+                for row in Q_basis:
+                    newQ.append(row.T)
+                print("newQ : \n{}".format(newQ))
+                for v in orbits[selected_orbit]:
+                    subspaces.append(v)
 
 
 
-    
+
+
+
+
+
+
+
+                        #elif (len(sublistQ)==0):
+                        #    print("adding to empty list")
+                        #    sublistQ.append(col.T/np.linalg.norm(col.T))
+                        #    subspaces.append(col)
+                        #    continue
+                        #lin_dependent_exists = False
+                        #for v in sublistQ:
+                        #    print(" v : {}".format(v))
+                        #    print(" col/np.linalg.norm(col): {}".format(col/np.linalg.norm(col)))
+                        #    print(" abs(abs(np.dot(col/np.linalg.norm(col),v))-1.)<self.tol: {}".format(np.dot(col/np.linalg.norm(col),v)))
+                        #    if abs(abs(np.dot(col/np.linalg.norm(col),v))-1.)<self.tol:
+                        #        print("Lin dependent")
+                        #        lin_dependent_exists = True
+                        #if not lin_dependent_exists:
+                        #    print("adding since no lin_dependent")
+                        #    sublistQ.append(col.T/np.linalg.norm(col.T))
+                        #    subspaces.append(col)
+
+
+                #print("sublistQ : \n{}".format(sublistQ))
+
+           # gmat = np.array(sublistQ).T @ np.array(sublistQ)         
+           # if len(sublistQ)>=len(inds):
+           #     orthog_basis = False
+           #     found_basis = False
+           #     for basis_inds in list(itertools.combinations(list(range(0,len(sublistQ))),len(inds))):
+           #         tmp_list_basis = [ sublistQ[i] for i in basis_inds]
+           #         tmp_basis = np.array(tmp_list_basis)
+           #         if np.allclose(tmp_basis.T @ tmp_basis, np.eye(tmp_basis.shape[0])):
+           #             Q_basis = tmp_basis.T @ Q[:,inds]
+           #             for row in Q_basis.T:
+           #                 newQ.append(row.T)
+           #             found_basis = True
+           #             break
+           #     if not found_basis
+
+           # elif (len(sublistQ) < len(inds)) and (np.allclose(np.array(sublistQ).T @ np.array(sublistQ),np.eye(len(sublist(Q))))):
+           #     Q_basis = np.array(sublistQ).T @ Q[:,inds]
+           #     for row in Q_basis.T:
+           #         newQ.append(row.T)
+
+
+            
+            #tmpQ  = np.array(sublistQ).T
+            #print("tmpQ : \n{}".format(tmpQ))
+            ##if (tmpQ.shape[1]==1):
+            #if (tmpQ.shape[1]<len(inds)) and (np.allclose(tmpQ.T @ tmpQ,np.eye(tmpQ.shape[1]))):
+            #    u,s,vh = np.linalg.svd(tmpQ)
+            #    W = u[:,tmpQ.shape[1]:]
+            #    for col in tmpQ:
+            #        newQ.append(col)
+            #    for col in W:
+            #        newQ.append(col)
+            #elif (tmpQ.shape[1]==len(inds)) and (np.allclose(tmpQ.T @ tmpQ,np.eye(tmpQ.shape[1]))):
+            #    for col in tmpQ:
+            #        newQ.append(col)
+            #elif (tmpQ.shape[1]==len(inds)) and (~np.allclose(tmpQ.T @ tmpQ,np.eye(tmpQ.shape[1]))):
+            #    u,s,vh = np.linalg.svd(tmpQ[:,0][:,None])
+            #    print("u : {} ".format(u))
+            #    W = u[:,tmpQ[:,0].shape[1]:]
+            #    for col in tmpQ:
+            #        newQ.append(col)
+            #    for col in W:
+            #        newQ.append(col)
+                
+        newQ = np.array(newQ).T
+        print("newQ: \n{}".format(newQ))
+        print("newQ.T @ newQ\n{}".format(newQ.T @ newQ))
+        return subspaces,newQ
+
+
+
+            
+
+    def find_all_subgroups(self):
+        """ This algorithm will brute force enumerate subgroups of the full_group.
+
+            A naive approach would be:
+                Besides the identity, start deleting 1 by 1 sym ops and then    
+                testing if the lefotver set of operations forms a group. 
+            Maybe we can do better:
+                Since these are going to be relatively simple point groups,
+                if they have reflections, then
+                they are giong to have equal number of rotations and reflections.
+                1. Take only the rotations and brute force them.
+                    ie remove operations 1 by 1, except the identity, and test 
+                    if they form a group.
+
+            Some observations:
+                Lagrange's THM: every subgroup G_i of P, will have a number of elements
+                    that divides the order of P. 
+                    i.e. |P| % |G_i| = 0. 
+                Every subgroup is a union of cyclic subgroups. 
+
+                Together this means that the highest order is |P| / 2.
+                So we can just   
+                
+            Best way:
+               1. Enumerate cyclic subgroups. This means take each element and
+                   multiply it by itelf until you get the indentity.
+               2. Start forming unions of cyclic subgroups.
+                    Say we have 4 cyclic subgroups, combine try all combinations   
+                    which have a number of elements <= |P| / 2.
+        """
+        cyclic_subgroups = set()
+        I = np.eye(self.dim)
+        for  i, op in enumerate(self.full_rep):
+            tmp_cyclic_subgroup = []
+            tmp_op = op
+            tmp_cyclic_subgroup.append(self.find_op(tmp_op))
+            while not np.allclose(tmp_op,I,atol=self.tol):
+                tmp_op = tmp_op @ op
+                tmp_cyclic_subgroup.append(self.find_op(tmp_op))
+                #print("tmp_op :\n{}\n".format(tmp_op))
+            cyclic_subgroups.add(tuple(tmp_cyclic_subgroup))
+        print(" All cyclic subgroup:\n{}".format(cyclic_subgroups))
+        subgroups = set()
+        for num_cyc_sgs in range(1,len(self.full_rep)):
+            cyc_sg_combos = list(itertools.combinations(cyclic_subgroups, num_cyc_sgs))
+            for combo in cyc_sg_combos:
+                test_sg_inds = set(itertools.chain.from_iterable(combo))
+                test_group = [ self.full_rep[j] for j in test_sg_inds]
+                testSymRep = SymRep(test_group)
+                if (testSymRep.is_group()) and (len(test_group)<len(self.full_rep)):
+                    #print("test_sg_inds is a group: {}".format(test_sg_inds))
+                    subgroups.add(tuple(test_sg_inds))
+                #else:
+                #    print("test_sg_inds is NOT a group: {}".format(test_sg_inds))
+        print(" All subgroups: \n{}\n".format(subgroups))
+        return subgroups
+
+            
+
+    def find_op(self,test_op): 
+        for i, op in enumerate(self.full_rep):
+            if np.allclose(op,test_op,atol=self.tol):
+                return i
 
     def is_reducible(self):
         assert  self.full_rep is not None, "Error: trying to check reducibility on a representation that hasn't been intialized"
@@ -275,6 +537,8 @@ class SymRep(object):
                         mol_pg.append(op)
                         mol_perms.append(perm)
         return mol_pg,mol_perms
+
+    
 
 
 
