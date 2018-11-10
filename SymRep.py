@@ -5,6 +5,13 @@ from . import misc
 import itertools
 
 class SymRep(object):
+    """ 
+    Symmetry Reprentation Class has symmetry and linear algebra algorithms
+        that can be used to investigate the symmetry properties of 
+        2D objects. 
+
+
+    """
     def __init__(self,full_rep=None,coordinates=None):
         """ full rep is a list of numpy arrays that form a group """
         if full_rep is not None:
@@ -114,20 +121,37 @@ class SymRep(object):
             orthogonal complement.
         
         """
+        # use Q to block diagonalize the full representation  
         block_rep = [ Q.T @ op @ Q for op in self.full_rep]  
+        # visualize blockdiagonalized representation for debugging  
         for op in block_rep:
             print(" op in block_rep : \n{}\n".format(op))
+        # get all subgroups 
+        # subgroups is a list of list of indices into self.full_rep
+        # that form a subgroup
         subgroups = self.find_all_subgroups() 
         bindex = 0
+        # dims is a list specifying to which 
+        # irrep each normal mode belongs. 
+        # i.e. [1,2,2,3] means there is 
+        # a 1-D irrep at index 0, then a 2D irrep 
+        # spanned by normal modes 1 & 2, then a 1D
+        # irrep spanned by normal mode 3.
         print("dims: {}".format(dims))
+        # get the unique irrep labels 
         udims = np.unique(dims)
+        # subspaces 
         subspaces = []
         newQ = []
         tmplistQ = []
         for udim in udims:
             vecs = []
+            # get the normal modes associated 
+            # with the current irrep 
             inds = np.where(dims==udim)[0]
             print(" inds : {}".format(inds))
+            # if the irrep is 1D, then we don't need to 
+            # find a high symmetry direction.
             if len(inds)==1:
                 newQ.append(Q[:,inds].T.flatten())
                 print("newQ : \n{}".format(newQ))
@@ -136,10 +160,15 @@ class SymRep(object):
             else:
                 orbits = []
                 sublistQ = []
+                # get this subspace's rep. 
                 test_rep =[ op[bindex:bindex+len(inds),bindex:bindex+len(inds)] for op in block_rep]
+                # iterate through subgroups 
                 for sg in subgroups:
+                    # skip identity 
                     if len(sg)==1:
                         continue
+                    # we will average the sym ops  
+                    # start with zerps
                     rey = np.zeros( (len(inds),len(inds)))
                     for op in sg:
                         rey += test_rep[op]
@@ -147,6 +176,8 @@ class SymRep(object):
                     print("averaged over subgroup: \n{}\n".format(rey))
                     #subspaces.append(rey)
                     
+                    # look at the column space of the projection  
+                    # col the transposed column vector. 
                     for col in rey.T:
                         orbit=[]
                         print("col : {} ".format(col))
