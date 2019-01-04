@@ -2,6 +2,9 @@
 
 Vibrational symmetry methods for 2D molecules. 
 
+![](https://github.com/jbechtel/vibsym/blob/master/scripts/input.gif "Square Molecule Normal Modes")
+
+
 This purpose of this project is to build a symmetry representation class `SymRep` that can find the normal modes of vibration for a 2D molecule. Finding the normal modes of a molecule is equivalent to block diagonalizing the full cartesian symmetry representation (i.e. the direct sum of the permuation and vector representations of the group). In order to find the symetry adapted basis that block diagonalizes the full Cartesian Sym Rep, several steps must be considered. 
 
 First, the symmetry operations of the molecule must be enumerated. The `SymRep.generate_2D_molecule_point_group(coordinates)` routine will find all of the 2D symmetry operations given a set of coordinates. The algorithm is a brute force approach that proceeds as follows:
