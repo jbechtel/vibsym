@@ -8,7 +8,7 @@ import matplotlib.animation as animation
 # set up initial state
 plot="tri"
 plot="sq"
-#plot="hex"
+# plot="hex"
 if  plot=="tri":
     permutations = [ [ 0,1,2], [2,0,1], [1,2,0], [0,2,1], [2,1,0], [1,0,2] ]
     rotations = [ 0, 120, -120]
@@ -20,7 +20,9 @@ if plot=="sq":
     reflections = [ 45, 90, 135, 180]
     init_state = [[1.,1.],[-1.,1.],[-1.,-1.],[1.,-1]]
 if plot=="hex":
-    permutations = [ [0,1,2,3,4,5],[5,0,1,2,3,4],[1,2,3,4,5,0],[4,5,0,1,2,3],[2,3,4,5,0,1],[3,4,5,0,1,2],[0,5,4,3,2,1],[1,0,5,4,3,2],[2,1,0,5,4,3],[3,2,1,0,5,4],[4,3,2,1,0,5],[5,4,3,2,1,0]]
+    permutations = [ 
+            [0,1,2,3,4,5],[5,0,1,2,3,4],[1,2,3,4,5,0],[4,5,0,1,2,3],[2,3,4,5,0,1],[3,4,5,0,1,2],
+            [2,1,0,5,4,3],[3,2,1,0,5,4],[4,3,2,1,0,5],[5,4,3,2,1,0],[0,5,4,3,2,1],[1,0,5,4,3,2]]
     rotations = [ 0,60,-60,120,-120,180]
     reflections = [90,120,150,180,210,240]
     init_state = [[np.sqrt(3.)/2.,0.5],[0.,1.],[-np.sqrt(3.)/2.,0.5],[-np.sqrt(3.)/2.,-0.5],[0.,-1.],[np.sqrt(3.)/2.,-0.5]]
@@ -30,36 +32,52 @@ if plot=="hex":
 
 np.set_printoptions(precision=14,suppress=True)
 # find sym ops from coordinates
-#rep = vs.SymRep(coordinates=init_state)
+# rep = vs.SymRep(coordinates=init_state)
 # just build ops directly
 rep = vs.SymRep(vs.repgen.generate_2D_cartesian_representation(permutations,rotations,reflections))
 print(" is REP a group: {}".format(rep.is_group()))
 trans_rota_Q = vs.repgen.trans_rota_basis_2D(init_state)
+# for col_index in range(trans_rota_Q.shape[1]):
+#     fig,ax = plt.subplots(1)
+#     print("trans_rota\n{}".format(trans_rota_Q))
+#     for ss,p in zip(trans_rota_Q[:,col_index].reshape(trans_rota_Q.shape[0]//2,2),init_state):
+#         print(f'p:\n{p}')
+#         print(f'ss:\n{ss}')
+#         ax.quiver(p[0],p[1],ss[0],ss[1],scale=6)
+#         ax.scatter(p[0],p[1])
+#     ax.set_xlim([-2,2])
+#     ax.set_ylim([-2,2])
+#     plt.tight_layout()
+#     plt.savefig(f'trans_rota_subspace_{col_index}.png')
+#     plt.show()
 print('trQ  = {}'.format(trans_rota_Q))
 #exit()
 print(' is big rep a group? {}'.format(rep.is_group()))
 Q,dims = rep.block_diagonalize(trans_rota_Q)
-Q = np.append(Q,trans_rota_Q[:,-1][:,None],1)
-#dims.append(1)
-dims.append(max(dims)+1)
+print(f'Q:\n{Q}')
+print(f'dims:\n{dims}')
+# Q = np.append(Q,trans_rota_Q[:,-1][:,None],1)
+# dims.append(max(dims)+1)
 print("dims : {}".format(dims))
-subspaces,newQ = rep.find_high_symmetry_directions(Q,dims)
-Q = newQ
+find_high_sym = True
+if find_high_sym:
+    subspaces,newQ = rep.find_high_symmetry_directions(Q,dims)
+    Q = newQ
+    #subgroups = rep.find_all_subgroups()
+    #print(" all subgroups:\n {}".format(subgroups))
+    fig,ax = plt.subplots(1)
+    print("subspaces\n{}".format(subspaces))
+    for ss in subspaces:
+        #dot = np.dot(ss[:,0]/np.linalg.norm(ss[:,0]),ss[:,1]/np.linalg.norm(ss[:,1]))
+        #print(" dot product = {}".format(dot))
+        ax.quiver([0],[0],ss[0],ss[1],scale=4)
+        #ax.plot(ss[0,:],ss[1,:])
+    plt.savefig('high_sym.png')
+    plt.show()
+
+
 print("Q:\n{}".format(Q))
 print("Q.T @ Q :\n{}".format(Q.T @ Q ))
-#subgroups = rep.find_all_subgroups()
-#print(" all subgroups:\n {}".format(subgroups))
-fig,ax = plt.subplots(1)
-print("subspaces\n{}".format(subspaces))
-for ss in subspaces:
-    #dot = np.dot(ss[:,0]/np.linalg.norm(ss[:,0]),ss[:,1]/np.linalg.norm(ss[:,1]))
-    #print(" dot product = {}".format(dot))
-    ax.quiver([0],[0],ss[0],ss[1],scale=4)
-    #ax.plot(ss[0,:],ss[1,:])
-plt.savefig('high_sym.png')
-plt.show()
-
-
 
 class Molecule:
     def __init__(self,

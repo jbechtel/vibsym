@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 import numpy as np
 from .SymRep import SymRep
-from sklearn.preprocessing import normalize
+from . import misc
+# from sklearn.preprocessing import normalize
 import itertools
 
 def generate_2D_triangle_cartesian_representation():
@@ -122,12 +123,14 @@ def permuted_direct_sum(cart_rep, perm_rep):
 
 def trans_rota_basis_2D(p):
     # define points 
+    print(f'points: \n{p}')
     #p = [[1.,1.],[-1.,1.],[-1.,-1.],[1.,-1]]
     # unit translations in x and y
     trans = [ [ 1.0, 0],[0.,1.]]
-    # small rotation about x 
+    # small rotation about z 
     #rota = generate_2D_rotation(.00001) # this is wrong
-    rota = -np.array([ [0,-1.],[1.,0]])
+    # this is a counter clockwise infinitesimal rotation
+    rota = np.array([ [0,-1.],[1.,0]])
     # now create a 2N X 3 matrix where the first two columns represent unit translations, and the last
     # represents a rotation
     # the orthogonal complement to this subspace defines the subspace for internal vibrations
@@ -144,11 +147,12 @@ def trans_rota_basis_2D(p):
         #Rt.extend(rp - np.array(op))
         Rt.extend(rp)
     print('Rt=\n{}'.format(Rt))
+    print(f'Qt before Rt: {Qt}')
     #Rt = flatten(Rt)
     Qt.append(Rt)
-    Qt.append([direction for atom in p for direction in atom])
+    # Qt.append([direction for atom in p for direction in atom])
     Q = np.array(Qt).T
-    Q = normalize(Q,norm='l2',axis=0)
+    # Q = misc.normalize_matrix(Q)
     print('Q=\n{}'.format(Q))
     return Q
 

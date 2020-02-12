@@ -30,44 +30,69 @@ class SymRep(object):
 
 
     def block_diagonalize(self,trans_rota_subspace=None):
+        """        # what is source of this algorithm?
+        probably defined in jct's paper  The exploration of nonlinear elasticity and its efficient parameterization for crystalline materials
+        idea of complement to disp/rota in Finite-temperature properties of strongly anharmonic and mechanically unstable crystal phases from first principles
+        """
         assert  self.full_rep is not None, "Error: trying to block diagonalize a representation that hasn't been intialized"
         np.set_printoptions(precision=3,suppress=True)
         
         # get orthogonal complement of the subspace spanned by translations
         # and rotations. As usual find the SVD, A = U D V
         # where U is orthogonal, D are singular values, V spans range
+        # the complement of A is given by U[:,A.shape[1]:] i.e. the columns that 
+        # are not spanned by A. 
         if trans_rota_subspace is not None:
             u,s,vh = np.linalg.svd(trans_rota_subspace)
+            # get null space of U
             W = u[:,trans_rota_subspace.shape[1]:]
+            # this should be orthogonal
             print(' DOT between W.T @ trans_rota_subspace \n{}'.format(W.T @ trans_rota_subspace))
+            assert misc.is_zero_matrix(W.T @ trans_rota_subspace), 'complement not orthogonal to trans_rota_subspace'
             print('W shape trans_rota = {}'.format(W.shape))
-            tA = W @ misc.random_full_rank_sym_mat(W.shape[1]) @ W.T 
-            print("Matrix rank of tA: {}".format(np.linalg.matrix_rank(tA)))
+            # this is a coordinate transformation that makes a random full rank matrix 
+            # in the space of purely deformational displacements .
+            tA = W @ misc.random_full_rank_sym_mat(W.shape[1]) @ W.T
+            tA_rank = np.linalg.matrix_rank(tA)
+            print("Matrix rank of tA: {}".format(tA_rank))
+            assert tA_rank == W.shape[1]
             print("tA")
             print(tA)
             num_dofs = W.shape[1]
-            #num_dofs = W.shape[0] - W.shape[1]
         else:
             tA = misc.random_full_rank_sym_mat(self.dim)
             num_dofs = self.dim
 
 
+        # Qt holds transposed column vectors of Q(e->E)
         Qt=[]
         dims = []
         count = 1
+        print(f'num_dofs: \n{num_dofs}')
         while len(Qt) < num_dofs:
+            print(f'len(Qt): {len(Qt)}')
             
-            A = self.reynolds(tA/tA.shape[0])  
+            # why  divide by shape?
+            # A = self.reynolds(tA/tA.shape[0])  
+            A = self.reynolds(tA)  
             print(' is A symmetric after Reynolds?')
-            print("Matrix rank of A: {}".format(np.linalg.matrix_rank(A)))
+            print("Matrix rank of A: {}".format(np.linalg.matrix_rank(A, tol=TOL)))
             print("Is A symmetric??? {}".format(np.allclose(A,A.T)))
             print("A")
             print(A)
+            print("trans_rota_subspace")
+            print(trans_rota_subspace)
             print("Max difference A-A.T = {}".format(np.abs(A.T-A).max()))
             print('is A invariant? {}'.format(self.is_invariant(A)))
+            print('trans_rota_Q.T @ A: \n{}'.format(trans_rota_subspace.T @ A))
+
+            # eigenvalues, D, and eigenbasis q
             D,q = np.linalg.eigh(A) 
             print('matrix_rank of q {}'.format(np.linalg.matrix_rank(q)))
+            # find the counts of unique eigenvalues
+            # trying to find those grops that span a subspace 
             u, indices = np.unique(np.around(D,6), return_inverse=True)
+            # reverse the order of the eigenvalues and indices to go from largest to smallest
             u = u[::-1]
             indices = indices.max() - indices
             print('u')
@@ -75,7 +100,7 @@ class SymRep(object):
             print('indices')
             print(indices)
             for i,val in enumerate(u):
-                if val==0:
+                if abs(val)<TOL:
                     continue
                 else:
                     print('val {}'.format(val))
@@ -83,31 +108,37 @@ class SymRep(object):
                     print('q')
                     print(q)
                     print('q.T @ q\n{}'.format(q.T @ q))
-                    print('is q orthogonal? {}'.format(np.allclose(q.T @ q, np.eye(q.shape[1]),atol=self.tol)))
+                    print('is q orthogonal? {}'.format(misc.is_zero_matrix(q.T @ q - np.eye(q.shape[1]))))
                     V = q[:,np.where(indices==i)[0]]
                     print('V')
                     print(V)
-                    print('is V orthogonal? {}'.format(np.allclose(V.T @ V, np.eye(V.shape[1]))))
+                    print('is V orthogonal? {}'.format(misc.is_zero_matrix(V.T @ V - np.eye(V.shape[1]))))
                     temp_rep = SymRep([ V.T @ op @ V for op in self.full_rep ])
                     temp_rep.pretty_print_full()
                     if not temp_rep.is_reducible():
+                        print(f'len(V.T):\n{len(V.T)}')
+                        print(f'V.T:\n{V.T}')
                         for row in V.T:
                             Qt.append(row)
+                        print(f'count: {count}')
+                        print(f'curr indices: {len(np.where(indices==i)[0])}')
                         dims.extend([count]*len(np.where(indices==i)[0]))
                         #dims.append(V.shape[1])
                         count += 1
             Q = np.array(Qt).T
             print('Q \n{}'.format(Q))
             print('matrix rank Q {}'.format(np.linalg.matrix_rank(Q)))
-            #exit()
+            # exit()
             if (np.linalg.matrix_rank(Q) < num_dofs) and  (np.linalg.matrix_rank(Q) > 0):
                 u,s,vh = np.linalg.svd(Q)
+                # get orthogonal complement
                 W = u[:,Q.shape[1]:]
+                # new random matrix that spans it
                 tA = W @ misc.random_full_rank_sym_mat(W.shape[1]) @ W.T 
-
+        assert len(dims) == num_dofs
         return np.array(Qt).T,dims
 
-    def find_high_symmetry_directions(self,Q=None,dims=None):
+    def find_high_symmetry_directions(self,Q=None,irrep_lookup=None): # dims=irrep_indices
         """ Need to enumerate all subgroups G_i, of P.  
             Then for each representation, average the action of the subgroup
             and observe the column space of the result. If it is 1, then there is only 
@@ -130,20 +161,163 @@ class SymRep(object):
         # subgroups is a list of list of indices into self.full_rep
         # that form a subgroup
         subgroups = self.find_all_subgroups() 
+        print(len(subgroups))
+
+        # this is an awkward counter that counts the entries in irrep_lookup
+        # likely, another container is perferred to irrep_lookup.
         bindex = 0
+
         # dims is a list specifying to which 
         # irrep each normal mode belongs. 
         # i.e. [1,2,2,3] means there is 
         # a 1-D irrep at index 0, then a 2D irrep 
         # spanned by normal modes 1 & 2, then a 1D
         # irrep spanned by normal mode 3.
-        print("dims: {}".format(dims))
+        # print("dims: {}".format(dims))
+        print("irrep_lookup: {}".format(irrep_lookup))
         # get the unique irrep labels 
-        udims = np.unique(dims)
+        # udims = np.unique(dims)
+        irrep_labels = np.unique(irrep_lookup)
         # subspaces 
         subspaces = []
         newQ = []
         tmplistQ = []
+
+        # iterate through irreducible subspaces 
+        for irrep_label in irrep_labels:
+            # get the normal modes associated 
+            # with the current irrep 
+            irrep_inds = sorted(list(np.where(irrep_lookup==irrep_label)[0]))
+            # Get normal modes 
+            print("irrep_inds : {}".format(irrep_inds))
+            curr_Qs = Q[:,irrep_inds]
+            # if the irrep is 1D, then we don't need to 
+            # find a high symmetry direction.
+            # subgroup_invariant_directions
+
+            if len(irrep_inds)==1:
+                for row in curr_Qs.T:
+                    newQ.append(row)
+                print('irrep_inds==1')
+                print("newQ : \n{}".format(newQ))
+                bindex+=1
+                continue
+            # subgroup is a list of indices into self.full_rep 
+            # or block_rep for that matter
+            list_of_orbits = []
+            for subgroup in subgroups:
+                print(f'irrep_inds=={len(irrep_inds)}')
+                orbits = []
+                sublistQ = []
+                # get this subspace's rep. 
+                curr_subspace_rep =[ op[bindex:bindex+len(irrep_inds),bindex:bindex+len(irrep_inds)] for op in block_rep]
+                curr_subgroup_rep =[ curr_subspace_rep[i] for i in subgroup]
+                # reynolds
+                np.set_printoptions(precision=8)
+                print(f'curr_subgroup_rep: \n{curr_subgroup_rep}')
+                averaged = np.sum(curr_subgroup_rep, axis=0) / len(curr_subgroup_rep)
+                print(f'averaged: \n{averaged}')
+                averaged = misc.normalize_matrix(averaged)
+                print(f'normalized averaged: \n{averaged}')
+                gram = averaged.T @ averaged
+                print(f'gram:\n{gram}')
+                # see if there were any non zero directions
+                rank = np.linalg.matrix_rank(averaged, tol=1E-6)
+                print(f'rank: {rank}')
+                if rank==0:
+                    print('no high sym directions projected out for this subgroup')
+                    continue
+                q,r = np.linalg.qr(averaged)
+                print(f'q: \n{q}')
+                print(f'r: \n{r}')
+                # Row indices of non-zero elements of r give linear independent cols of q. 
+                # row_indices, col_indices = np.where(np.abs(r)>1E-6)
+
+                sublistQ = unique_vectors_from_list([vec for vec in averaged.T])
+                sublistQ = [misc.normalize(vec) for vec in sublistQ if not np.linalg.norm(vec)<self.tol]
+
+                print(f'sublistQ: {sublistQ}')
+                # sublistQ holds all non-zero directions for this subgroup
+                assert len(sublistQ)==rank, 'rank not equal to number of collected vecs'
+                print(sublistQ)
+                # for each vec in sublistQ apply the whole group, then get the 
+                # set of distinct vectors. and see if they for a mutually orthogonal set with 
+                # order equal to the dimension of the irrep.
+                # if we find an example then we are done. OTherwise we want to find a set of mutually
+                # orthogonal vectors, and then get orthogonal complement. 
+                for vec in sublistQ:
+                    orbit = [rep.dot(vec) for rep in curr_subspace_rep]
+                    print(f'orbit:\m: {orbit}')
+                    print(f'orbit:\m: {len(orbit)}')
+                    set_orbit = unique_vectors_from_list(orbit)
+                    print(f'set(orbit):\m: {set_orbit}')
+                    print(f'set(orbit):\m: {len(set_orbit)}')
+                    list_of_orbits.append(set_orbit)
+                    # if len(set_orbit)==len(irrep_inds):
+                    #     print('found good basis')
+                # end for over invariant directions
+            # end for over subgroups
+            # now we have all of the high sym orbits in list_of_orbits 
+            # let's make a unique set of this list
+            flat_list_of_orbits = list(itertools.chain.from_iterable(list_of_orbits))
+            unique_invariant_directions = unique_vectors_from_list(flat_list_of_orbits)
+            # now we want to count how many times each unique vector occurs in flat_list_orbits
+            # the idea is that if it shows up more times it is likely a more important direction
+            counts_of_invariant_directions = count_unique_vectors(flat_list_of_orbits, unique_invariant_directions)
+            print(f'counts_of_invariant_directions: \n {counts_of_invariant_directions}')
+            print(f'unique_invariant_directions: \n {unique_invariant_directions}')
+            print(f'flat_list_of_orbits: \n {flat_list_of_orbits}')
+            print(f'len(unique_invariant_directions): \n {len(unique_invariant_directions)}')
+            print(f'len(flat_list_of_orbits): \n {len(flat_list_of_orbits)}')
+
+            # given few options of high multiplicity find if an orthogonal basis exists
+            potential_bases = []
+            for combination in itertools.combinations(unique_invariant_directions, len(irrep_inds)):
+                # construct potential basis
+                B = np.array(combination)
+                is_orthog = misc.is_zero_matrix((B @ B.T) - np.eye(*B.shape))
+                if is_orthog:
+                    potential_bases.append(combination)
+             
+            orthog_basis = None
+            if len(potential_bases) > 1:
+                print(f'many potentials: {len(potential_bases)}')
+                for combination in potential_bases:  
+                    print(combination)
+                    for row in combination:
+                        if np.allclose(np.abs(row), np.array([0,1]), atol=ATOL, rtol=RTOL):
+                            orthog_basis = np.array(combination)
+            elif len(potential_basis)==1:
+                print('single potential')
+                orthog_basis = np.array(combination)
+            else:
+                print('somethings wrong')
+                print(f'potential_basis: \n{potential_bases}')
+                exit()
+
+        # end for over irreps 
+            print(f'orthog_basis: \n{orthog_basis}')
+
+
+
+
+            orthog_basis = orthog_basis.T
+            Q_basis = curr_Qs @ orthog_basis
+            print("Q_basis : \n{}".format(Q_basis))
+            print("before newQ : \n{}".format(newQ))
+            for col in Q_basis.T:
+                newQ.append(col)
+            print("after newQ : \n{}".format(newQ))
+            # for v in orbits[selected_orbit]:
+            #     subspaces.append(v)
+
+        newQ = np.array(newQ).T
+        print("newQ: \n{}".format(newQ))
+        print("newQ.T @ newQ\n{}".format(newQ.T @ newQ))
+        return subspaces,newQ
+
+        
+
         for udim in udims:
             vecs = []
             # get the normal modes associated 
@@ -250,80 +424,6 @@ class SymRep(object):
                 for v in orbits[selected_orbit]:
                     subspaces.append(v)
 
-
-
-
-
-
-
-
-
-
-                        #elif (len(sublistQ)==0):
-                        #    print("adding to empty list")
-                        #    sublistQ.append(col.T/np.linalg.norm(col.T))
-                        #    subspaces.append(col)
-                        #    continue
-                        #lin_dependent_exists = False
-                        #for v in sublistQ:
-                        #    print(" v : {}".format(v))
-                        #    print(" col/np.linalg.norm(col): {}".format(col/np.linalg.norm(col)))
-                        #    print(" abs(abs(np.dot(col/np.linalg.norm(col),v))-1.)<self.tol: {}".format(np.dot(col/np.linalg.norm(col),v)))
-                        #    if abs(abs(np.dot(col/np.linalg.norm(col),v))-1.)<self.tol:
-                        #        print("Lin dependent")
-                        #        lin_dependent_exists = True
-                        #if not lin_dependent_exists:
-                        #    print("adding since no lin_dependent")
-                        #    sublistQ.append(col.T/np.linalg.norm(col.T))
-                        #    subspaces.append(col)
-
-
-                #print("sublistQ : \n{}".format(sublistQ))
-
-           # gmat = np.array(sublistQ).T @ np.array(sublistQ)         
-           # if len(sublistQ)>=len(inds):
-           #     orthog_basis = False
-           #     found_basis = False
-           #     for basis_inds in list(itertools.combinations(list(range(0,len(sublistQ))),len(inds))):
-           #         tmp_list_basis = [ sublistQ[i] for i in basis_inds]
-           #         tmp_basis = np.array(tmp_list_basis)
-           #         if np.allclose(tmp_basis.T @ tmp_basis, np.eye(tmp_basis.shape[0])):
-           #             Q_basis = tmp_basis.T @ Q[:,inds]
-           #             for row in Q_basis.T:
-           #                 newQ.append(row.T)
-           #             found_basis = True
-           #             break
-           #     if not found_basis
-
-           # elif (len(sublistQ) < len(inds)) and (np.allclose(np.array(sublistQ).T @ np.array(sublistQ),np.eye(len(sublist(Q))))):
-           #     Q_basis = np.array(sublistQ).T @ Q[:,inds]
-           #     for row in Q_basis.T:
-           #         newQ.append(row.T)
-
-
-            
-            #tmpQ  = np.array(sublistQ).T
-            #print("tmpQ : \n{}".format(tmpQ))
-            ##if (tmpQ.shape[1]==1):
-            #if (tmpQ.shape[1]<len(inds)) and (np.allclose(tmpQ.T @ tmpQ,np.eye(tmpQ.shape[1]))):
-            #    u,s,vh = np.linalg.svd(tmpQ)
-            #    W = u[:,tmpQ.shape[1]:]
-            #    for col in tmpQ:
-            #        newQ.append(col)
-            #    for col in W:
-            #        newQ.append(col)
-            #elif (tmpQ.shape[1]==len(inds)) and (np.allclose(tmpQ.T @ tmpQ,np.eye(tmpQ.shape[1]))):
-            #    for col in tmpQ:
-            #        newQ.append(col)
-            #elif (tmpQ.shape[1]==len(inds)) and (~np.allclose(tmpQ.T @ tmpQ,np.eye(tmpQ.shape[1]))):
-            #    u,s,vh = np.linalg.svd(tmpQ[:,0][:,None])
-            #    print("u : {} ".format(u))
-            #    W = u[:,tmpQ[:,0].shape[1]:]
-            #    for col in tmpQ:
-            #        newQ.append(col)
-            #    for col in W:
-            #        newQ.append(col)
-                
         newQ = np.array(newQ).T
         print("newQ: \n{}".format(newQ))
         print("newQ.T @ newQ\n{}".format(newQ.T @ newQ))
@@ -373,7 +473,7 @@ class SymRep(object):
                 tmp_op = tmp_op @ op
                 tmp_cyclic_subgroup.append(self.find_op(tmp_op))
                 #print("tmp_op :\n{}\n".format(tmp_op))
-            cyclic_subgroups.add(tuple(tmp_cyclic_subgroup))
+            cyclic_subgroups.add(tuple(sorted(tmp_cyclic_subgroup)))
         print(" All cyclic subgroup:\n{}".format(cyclic_subgroups))
         subgroups = set()
         for num_cyc_sgs in range(1,len(self.full_rep)):
@@ -425,12 +525,10 @@ class SymRep(object):
 
     def reynolds(self,A):
         assert  self.full_rep is not None, "Error: trying to apply Reynolds operator to representation that hasn't been intialized"
-        tA = np.zeros(A.shape)
-        rey = [ op.T @ A @ op for op in self.full_rep ]
-        tA = sum(rey)
-        #for op in self.full_rep:
-        #    tA += op.T @ A @ op
-        tA /= float(len(self.full_rep))
+        # is this right?
+        # tA = np.mean([ op.T @ A @ op for op in self.full_rep ], axis=0)
+        # below from A.1 JCT nonlinear elasticity def of invariant A matrix
+        tA = np.mean([ op @ A @ op.T for op in self.full_rep ], axis=0)
         print(' Reynold\'s on A :\n{}'.format(tA))
         return tA
 
@@ -570,9 +668,44 @@ class SymRep(object):
         return mol_pg,mol_perms
 
     
-
+RTOL = 1E-4
+ATOL = 1E-7
+TOL = 1E-6
 
 
          
+def unique_vectors_from_list(vec_list):
+    uvec_list = []
+    for i,iv in enumerate(vec_list):
+        if i==0:
+            uvec_list.append(iv)
+            continue
+        in_list = False
+        for j,jv in enumerate(uvec_list):
+            if np.allclose(jv, iv, rtol=RTOL, atol=ATOL) or  \
+                np.allclose(jv, -1.*iv, rtol=RTOL, atol=ATOL):
+            #if np.allclose(jv, iv, rtol=RTOL, atol=ATOL):
+                in_list = True
+        if not in_list:
+            uvec_list.append(iv)
+    return uvec_list
+def count_unique_vectors(vec_list, unique_vec_list):
+    """ determines the number of times each element of 
+        unique_vec_list occurs in vec_list  
+        
+    Returns:
+        counters: counts in same order as unique_vec_list
+    """
+
+    counters = []
+    for uvec in unique_vec_list:
+        tmp_counter = 0
+        for vec in vec_list:
+            # if np.allclose(uvec, vec, atol=ATOL, rtol=RTOL):
+            if np.allclose(uvec, vec, atol=ATOL, rtol=RTOL) or \
+                np.allclose(uvec, -vec, atol=ATOL, rtol=RTOL):
+                tmp_counter += 1
+        counters.append(tmp_counter)
+    return counters
 
 
