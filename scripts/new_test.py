@@ -8,7 +8,7 @@ import matplotlib.animation as animation
 # set up initial state
 plot="tri"
 plot="sq"
-# plot="hex"
+plot="hex"
 if  plot=="tri":
     permutations = [ [ 0,1,2], [2,0,1], [1,2,0], [0,2,1], [2,1,0], [1,0,2] ]
     rotations = [ 0, 120, -120]
@@ -68,10 +68,13 @@ if find_high_sym:
     fig,ax = plt.subplots(1)
     print("subspaces\n{}".format(subspaces))
     for ss in subspaces:
-        #dot = np.dot(ss[:,0]/np.linalg.norm(ss[:,0]),ss[:,1]/np.linalg.norm(ss[:,1]))
-        #print(" dot product = {}".format(dot))
-        ax.quiver([0],[0],ss[0],ss[1],scale=4)
-        #ax.plot(ss[0,:],ss[1,:])
+        if ss.shape[0]>1:
+            for row in ss.T:
+
+                #dot = np.dot(ss[:,0]/np.linalg.norm(ss[:,0]),ss[:,1]/np.linalg.norm(ss[:,1]))
+                #print(" dot product = {}".format(dot))
+                ax.quiver([0],[0],row[0],row[1],scale=4)
+                #ax.plot(ss[0,:],ss[1,:])
     plt.savefig('high_sym.png')
     plt.show()
 
@@ -173,9 +176,9 @@ ani = animation.FuncAnimation(fig, animate, frames=600,
 # the video can be embedded in html5.  You may need to adjust this for
 # your system: for more information, see
 # http://matplotlib.sourceforge.net/api/animation_api.html
-#ani.save('normal_modes.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
+# ani.save('normal_modes.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
 plt.tight_layout()
-#ani.save('normal_modes.gif', fps=120,writer='imagemagick')
+# ani.save('normal_modes.gif', fps=120,writer='imagemagick')
 
 plt.show()
 

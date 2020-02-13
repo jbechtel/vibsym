@@ -157,6 +157,8 @@ class SymRep(object):
         # visualize blockdiagonalized representation for debugging  
         for op in block_rep:
             print(" op in block_rep : \n{}\n".format(op))
+            assert np.abs(np.linalg.det(op)) - 1 < TOL
+
         # get all subgroups 
         # subgroups is a list of list of indices into self.full_rep
         # that form a subgroup
@@ -272,22 +274,49 @@ class SymRep(object):
 
             # given few options of high multiplicity find if an orthogonal basis exists
             potential_bases = []
-            for combination in itertools.combinations(unique_invariant_directions, len(irrep_inds)):
+            potential_mults = []
+            zipped_vecs_mults = zip(itertools.combinations(unique_invariant_directions, 
+                                                           len(irrep_inds)), 
+                                    itertools.combinations(counts_of_invariant_directions, 
+                                                           len(irrep_inds))) 
+
+            for combination, mults in zipped_vecs_mults:
                 # construct potential basis
                 B = np.array(combination)
                 is_orthog = misc.is_zero_matrix((B @ B.T) - np.eye(*B.shape))
                 if is_orthog:
                     potential_bases.append(combination)
+                    potential_mults.append(mults)
              
             orthog_basis = None
-            if len(potential_bases) > 1:
+            bases_that_include_max_direction = [basis for basis,mult in zip(potential_bases,potential_mults) if max(counts_of_invariant_directions) in mult]
+            if len(bases_that_include_max_direction) == 0:
+                print('no direction includes max direction')
+                print('constructing basis from orthogonal complement')
+                max_direction_index = np.argsort(np.array(counts_of_invariant_directions))[-1]
+                col_vec = unique_invariant_directions[max_direction_index][:,None]
+                u,d,v = np.linalg.svd(col_vec)
+                orthog_vec = u[:,-1]
+                print(f'col_vec: \n{col_vec}')
+                print(f'orthog_vec: \n{orthog_vec}')
+                orthog_basis = np.vstack((col_vec.T,u[:,-1]))# works bc only 2d irreps
+            elif len(potential_bases) > 1:
+                mults = np.array([sum(m) for m in potential_mults])
+                inds = mults.argsort()
+                print(f'inds: \n{inds}')
+                print(f'mults: \n{mults}')
+
+
                 print(f'many potentials: {len(potential_bases)}')
-                for combination in potential_bases:  
-                    print(combination)
-                    for row in combination:
-                        if np.allclose(np.abs(row), np.array([0,1]), atol=ATOL, rtol=RTOL):
-                            orthog_basis = np.array(combination)
-            elif len(potential_basis)==1:
+                orthog_basis = np.array(potential_bases[inds[-1]])
+
+                # for combination,sum_mults in zip(potential_bases,potential_mults):  
+                #     print(combination)
+                #     for row in combination:
+                #         if np.allclose(np.abs(row), np.array([0,1]), atol=ATOL, rtol=RTOL):
+                #             orthog_basis = np.array(combination)
+
+            elif len(potential_bases)==1:
                 print('single potential')
                 orthog_basis = np.array(combination)
             else:
@@ -302,6 +331,7 @@ class SymRep(object):
 
 
             orthog_basis = orthog_basis.T
+            subspaces.append(orthog_basis)
             Q_basis = curr_Qs @ orthog_basis
             print("Q_basis : \n{}".format(Q_basis))
             print("before newQ : \n{}".format(newQ))
