@@ -108,11 +108,11 @@ class SymRep(object):
                     print('q')
                     print(q)
                     print('q.T @ q\n{}'.format(q.T @ q))
-                    print('is q orthogonal? {}'.format(misc.is_zero_matrix(q.T @ q - np.eye(q.shape[1]))))
+                    print('is q orthogonal? {}'.format(misc.is_orthogonal_matrix(q)))
                     V = q[:,np.where(indices==i)[0]]
                     print('V')
                     print(V)
-                    print('is V orthogonal? {}'.format(misc.is_zero_matrix(V.T @ V - np.eye(V.shape[1]))))
+                    print('is V orthogonal? {}'.format(misc.is_orthogonal_matrix(V)))
                     temp_rep = SymRep([ V.T @ op @ V for op in self.full_rep ])
                     temp_rep.pretty_print_full()
                     if not temp_rep.is_reducible():
@@ -136,7 +136,9 @@ class SymRep(object):
                 # new random matrix that spans it
                 tA = W @ misc.random_full_rank_sym_mat(W.shape[1]) @ W.T 
         assert len(dims) == num_dofs
-        return np.array(Qt).T,dims
+        Q = np.array(Qt).T
+        assert misc.is_orthogonal_matrix(Q)
+        return Q,dims
 
     def find_high_symmetry_directions(self,Q=None,irrep_lookup=None): # dims=irrep_indices
         """ Need to enumerate all subgroups G_i, of P.  
@@ -159,6 +161,7 @@ class SymRep(object):
             print(" op in block_rep : \n{}\n".format(op))
             assert np.abs(np.linalg.det(op)) - 1 < TOL
 
+        assert SymRep(block_rep).is_group()
         # get all subgroups 
         # subgroups is a list of list of indices into self.full_rep
         # that form a subgroup
@@ -213,7 +216,11 @@ class SymRep(object):
                 sublistQ = []
                 # get this subspace's rep. 
                 curr_subspace_rep =[ op[bindex:bindex+len(irrep_inds),bindex:bindex+len(irrep_inds)] for op in block_rep]
+                print('curr_subspace_rep')
+                print(curr_subspace_rep)
+                assert SymRep(curr_subspace_rep).is_group()
                 curr_subgroup_rep =[ curr_subspace_rep[i] for i in subgroup]
+                assert SymRep(curr_subgroup_rep).is_group()
                 # reynolds
                 np.set_printoptions(precision=8)
                 print(f'curr_subgroup_rep: \n{curr_subgroup_rep}')
@@ -289,92 +296,30 @@ class SymRep(object):
             else:
                 # if no orbits are divisible by irrep dim then we have too many
                 # vecs for the space. 
-                # just take first?
-                orbit = list_of_orbits[-1]
-                reoriented_Qs = []
-                for v in orbit:
-                    v = v.T
-                    q = curr_Qs @ v
-                    reoriented_Qs.append(Q)
+                # loop through orbits looking for sparsist Q
+                best_vec = None
+                sparse_score = 0
+                print(f'list_of_orbits: \n{list_of_orbits}')
+                for orbit in list_of_orbits:
+                    for v in orbit:
+                        v = v[:,None]
+                        q = curr_Qs @ v
+                        # print(f'roriented q: \n{q}')
+                        curr_sparse_score = (np.abs(q)<1E-8).sum()
+                        # print(f'curr_sparse_score: \n{curr_sparse_score}')
+                        if curr_sparse_score >= sparse_score:
+                            sparse_score = curr_sparse_score
+                            best_vec = v
+                        
+                 
 
-                best_vec_index = np.argsort([(np.abs(q)< 1E-8).sum() for q in reoriented_Qs])[-1]
-                print(best_vec_index)
-                print(reoriented_Qs)
-                col_vec = orbit[best_vec_index][:,None]
-                u,d,v = np.linalg.svd(col_vec)
+
+                print(f'best_vec: \n{best_vec}')
+                u,d,v = np.linalg.svd(best_vec)
                 orthog_vec = u[:,-1]
-                print(f'col_vec: \n{col_vec}')
                 print(f'orthog_vec: \n{orthog_vec}')
-                orthog_basis = np.vstack((col_vec.T,u[:,-1]))# works bc only 2d irreps
+                orthog_basis = np.vstack((best_vec.T,u[:,-1]))# works bc only 2d irreps
 
-
-
-
-            # end for over subgroups
-            # now we have all of the high sym orbits in list_of_orbits 
-            # # let's make a unique set of this list
-            # flat_list_of_orbits = list(itertools.chain.from_iterable(list_of_orbits))
-            # unique_invariant_directions = unique_vectors_from_list(flat_list_of_orbits)
-            # # now we want to count how many times each unique vector occurs in flat_list_orbits
-            # # the idea is that if it shows up more times it is likely a more important direction
-            # counts_of_invariant_directions = count_unique_vectors(flat_list_of_orbits, unique_invariant_directions)
-            # print(f'counts_of_invariant_directions: \n {counts_of_invariant_directions}')
-            # print(f'unique_invariant_directions: \n {unique_invariant_directions}')
-            # print(f'flat_list_of_orbits: \n {flat_list_of_orbits}')
-            # print(f'len(unique_invariant_directions): \n {len(unique_invariant_directions)}')
-            # print(f'len(flat_list_of_orbits): \n {len(flat_list_of_orbits)}')
-
-            # # given few options of high multiplicity find if an orthogonal basis exists
-            # potential_bases = []
-            # potential_mults = []
-            # zipped_vecs_mults = zip(itertools.combinations(unique_invariant_directions, 
-            #                                                len(irrep_inds)), 
-            #                         itertools.combinations(counts_of_invariant_directions, 
-            #                                                len(irrep_inds))) 
-
-            # for combination, mults in zipped_vecs_mults:
-            #     # construct potential basis
-            #     B = np.array(combination)
-            #     is_orthog = misc.is_zero_matrix((B @ B.T) - np.eye(*B.shape))
-            #     if is_orthog:
-            #         potential_bases.append(combination)
-            #         potential_mults.append(mults)
-             
-            # orthog_basis = None
-            # bases_that_include_max_direction = [basis for basis,mult in zip(potential_bases,potential_mults) if max(counts_of_invariant_directions) in mult]
-            # if len(bases_that_include_max_direction) == 0:
-            #     print('no direction includes max direction')
-            #     print('constructing basis from orthogonal complement')
-            #     max_direction_index = np.argsort(np.array(counts_of_invariant_directions))[-1]
-            #     col_vec = unique_invariant_directions[max_direction_index][:,None]
-            #     u,d,v = np.linalg.svd(col_vec)
-            #     orthog_vec = u[:,-1]
-            #     print(f'col_vec: \n{col_vec}')
-            #     print(f'orthog_vec: \n{orthog_vec}')
-            #     orthog_basis = np.vstack((col_vec.T,u[:,-1]))# works bc only 2d irreps
-            # elif len(potential_bases) > 1:
-            #     mults = np.array([sum(m) for m in potential_mults])
-            #     inds = mults.argsort()
-            #     print(f'inds: \n{inds}')
-            #     print(f'mults: \n{mults}')
-
-
-            #     print(f'many potentials: {len(potential_bases)}')
-            #     orthog_basis = np.array(potential_bases[inds[-1]])
-
-            #     # for combination,sum_mults in zip(potential_bases,potential_mults):  
-            #     #     print(combination)
-            #     #     for row in combination:
-            #     #         if np.allclose(np.abs(row), np.array([0,1]), atol=ATOL, rtol=RTOL):
-            #     #             orthog_basis = np.array(combination)
-
-            # elif len(potential_bases)==1:
-            #     print('single potential')
-            #     orthog_basis = np.array(combination)
-            # else:
-            #     print('somethings wrong')
-            #     print(f'potential_basis: \n{potential_bases}')
-            #     exit()
 
         # end for over irreps 
             print(f'orthog_basis: \n{orthog_basis}')
@@ -397,121 +342,6 @@ class SymRep(object):
         print("newQ: \n{}".format(newQ))
         print("newQ.T @ newQ\n{}".format(newQ.T @ newQ))
         return subspaces,newQ
-
-        
-
-        for udim in udims:
-            vecs = []
-            # get the normal modes associated 
-            # with the current irrep 
-            inds = np.where(dims==udim)[0]
-            print(" inds : {}".format(inds))
-            # if the irrep is 1D, then we don't need to 
-            # find a high symmetry direction.
-            if len(inds)==1:
-                newQ.append(Q[:,inds].T.flatten())
-                print("newQ : \n{}".format(newQ))
-                bindex+=1
-                continue
-            else:
-                orbits = []
-                sublistQ = []
-                # get this subspace's rep. 
-                test_rep =[ op[bindex:bindex+len(inds),bindex:bindex+len(inds)] for op in block_rep]
-                # iterate through subgroups 
-                for sg in subgroups:
-                    # skip identity 
-                    if len(sg)==1:
-                        continue
-                    # we will average the sym ops  
-                    # start with zerps
-                    rey = np.zeros( (len(inds),len(inds)))
-                    for op in sg:
-                        rey += test_rep[op]
-                    rey /= len(sg)
-                    print("averaged over subgroup: \n{}\n".format(rey))
-                    #subspaces.append(rey)
-                    
-                    # look at the column space of the projection  
-                    # col the transposed column vector. 
-                    for col in rey.T:
-                        orbit=[]
-                        print("col : {} ".format(col))
-                        if np.allclose(col,np.zeros(col.shape)):
-                            print("all zeros")
-                            continue
-                        else: 
-                            print("not zero")
-                            for op in test_rep:
-                                v = op @ col.T
-                                v = v / np.linalg.norm(v)
-                                v_in_orbit = False
-                                for t in orbit:
-                                    if np.allclose(v,t):
-                                        v_in_orbit = True
-                                if (len(orbit)==0):
-                                    print(" adding first v")
-                                    orbit.append(v)
-                                elif not v_in_orbit: 
-                                    print("appending v to orbit" )
-                                    orbit.append(v)
-                        orbits.append(orbit)
-                    # end subgroups
-
-                mults = [ len(orbit) for orbit in orbits ]
-                print("mults : {}".format(mults))
-                sorted_mults = np.argsort(mults)[::-1]
-                selected_orbit = None
-                for ind in sorted_mults:
-                    if len(self.full_rep) % mults[ind] == 0:
-                        selected_orbit = ind
-                        break
-                if selected_orbit==None:
-                    print(" ERROR: didn't find a high sym direction with multiplicity that divides group order ")
-                    exit()
-                # this gets all permutations of rep.dimension number of vectors from orbit[selected_orbit] 
-                # Then use the permutations, compute the gram matrix and compare to identity
-                # if identity then they form an orthogonal basis! 
-                # if not, then just get an orthogonal complement.
-                orthog_basis = None
-                print("selected_orbit : {}".format(selected_orbit))
-                print("orbits : \n{}".format(orbits))
-                for basis_inds in list(itertools.permutations(list(range(0,mults[selected_orbit])),len(inds))):
-                    print("basis_inds: {}".format(basis_inds))
-                    print("orbit[selected_orbit]: \n{}\n".format(orbits[selected_orbit]))
-                    tmp_array = []
-                    for i in basis_inds:
-                        tmp_array.append(orbits[selected_orbit][i])
-                    b = np.array(tmp_array)
-                    if np.allclose(b @ b.T,np.eye(b.shape[0])):
-                        orthog_basis = b
-                        print(" orthog_basis : \n{}".format(orthog_basis))
-                        print(" orthog_basis @ orthog_basis.T: \n{}".format(orthog_basis @ orthog_basis.T))
-                        break
-                         
-                if orthog_basis is None:
-                    u,s,vh = np.linalg.svd(orbits[selected_orbit][0][:,None])
-                    W = u[:,1:]
-                    print("orbits[selected_orbit][0][:,None] :\n{}".format(orbits[selected_orbit][0][:,None]))
-                    print("W : \n{}".format(W))
-                    orthog_basis = np.hstack((orbits[selected_orbit][0][:,None],W))  
-                    print(" orthog_basis : \n{}".format(orthog_basis))
-                    print(" orthog_basis @ orthog_basis.T: \n{}".format(orthog_basis @ orthog_basis.T))
-                
-                Q_basis = orthog_basis.T @ Q[:,inds].T
-                print("Q_basis : \n{}".format(Q_basis))
-                for row in Q_basis:
-                    newQ.append(row.T)
-                print("newQ : \n{}".format(newQ))
-                for v in orbits[selected_orbit]:
-                    subspaces.append(v)
-
-        newQ = np.array(newQ).T
-        print("newQ: \n{}".format(newQ))
-        print("newQ.T @ newQ\n{}".format(newQ.T @ newQ))
-        return subspaces,newQ
-
-
 
             
 
@@ -791,6 +621,16 @@ def count_unique_vectors(vec_list, unique_vec_list):
     return counters
 
 
+def is_orthogonal_matrix(Q: np.array): 
+    """ checks orthogonality of column vectors 
+    
+    returns:
+        bool
+    """
+    return misc.is_zero_matrix(Q.T @ Q - np.eye(Q.shape[1]))
+
+
+
 def get_all_right_handed_2d_bases_from_orbit(o):
     """ Given list of high sym vectors find right handed basis 
 
@@ -804,7 +644,7 @@ def get_all_right_handed_2d_bases_from_orbit(o):
     for (vi, vj) in itertools.permutations(o, r=2):
         # rows are basis vecs
         B = np.array([vi,vj])
-        is_orthog = misc.is_zero_matrix(B @ B.T - np.eye(*B.shape))
+        is_orthog = is_orthogonal_matrix(B)
         is_in_rhb = False
         for rhb in right_handed_bases:
             if not misc.is_zero_matrix(rhb - B):

@@ -7,7 +7,7 @@ import matplotlib.animation as animation
 #------------------------------------------------------------
 # set up initial state
 plot="tri"
-# plot="sq"
+plot="sq"
 plot="hex"
 if  plot=="tri":
     permutations = [ [ 0,1,2], [2,0,1], [1,2,0], [0,2,1], [2,1,0], [1,0,2] ]
@@ -118,7 +118,8 @@ dt = 1. / 30 # 30fps
 #------------------------------------------------------------
 # set up figure and animation
 #fig = plt.figure()
-fig, axes = plt.subplots(1, Q.shape[1],figsize=(6,3))
+nqs = Q.shape[1]
+fig, axes = plt.subplots(1, Q.shape[1],figsize=(nqs,nqs//2))
 #fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 # particles holds the locations of the particles
 particles = []
@@ -153,7 +154,7 @@ def animate(i):
 
     ms= int(fig.dpi * 2 * box.size * fig.get_figwidth()
              / np.diff(ax.get_xbound())[0])
-    ms=7
+    ms=5
     
     # update pieces of the animation
     for p,box in zip(particles,boxes):
@@ -176,9 +177,13 @@ ani = animation.FuncAnimation(fig, animate, frames=600,
 # the video can be embedded in html5.  You may need to adjust this for
 # your system: for more information, see
 # http://matplotlib.sourceforge.net/api/animation_api.html
-# ani.save('normal_modes.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
+# ani.save('normal_modes.mp4', dpi=200,fps=30, extra_args=['-vcodec', 'libx264'])
 plt.tight_layout()
+# Writer = animation.writers['ffmpeg']
+# writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
+# ani.save('normal_modes.mp4', writer=Writer, dpi=100)
 # ani.save('normal_modes.gif', fps=120,writer='imagemagick')
+# ani.save('normal_modes.gif', writer='imagemagick')
 
 plt.show()
 
