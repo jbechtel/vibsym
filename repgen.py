@@ -152,7 +152,6 @@ def trans_rota_basis_2D(p):
     Qt.append(Rt)
     # Qt.append([direction for atom in p for direction in atom])
     Q = np.array(Qt).T
-    # Q = misc.normalize_matrix(Q)
     print('Q=\n{}'.format(Q))
     return Q
 

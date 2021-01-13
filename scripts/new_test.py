@@ -7,7 +7,7 @@ import matplotlib.animation as animation
 #------------------------------------------------------------
 # set up initial state
 plot="tri"
-# plot="sq"
+plot="sq"
 plot="hex"
 if  plot=="tri":
     permutations = [ [ 0,1,2], [2,0,1], [1,2,0], [0,2,1], [2,1,0], [1,0,2] ]
