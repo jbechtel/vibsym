@@ -73,7 +73,6 @@ class SymRep(object):
             print(f'len(Qt): {len(Qt)}')
             
             # why  divide by shape?
-            # A = self.reynolds(tA/tA.shape[0])  
             A = self.reynolds(tA)  
             print(' is A symmetric after Reynolds?')
             print("Matrix rank of A: {}".format(np.linalg.matrix_rank(A, tol=TOL)))
@@ -136,7 +135,10 @@ class SymRep(object):
                 # new random matrix that spans it
                 tA = W @ misc.random_full_rank_sym_mat(W.shape[1]) @ W.T 
         assert len(dims) == num_dofs
-        return np.array(Qt).T,dims
+        Q = np.array(Qt).T
+        assert misc.is_zero_matrix((Q.T @ Q) - np.eye(Q.shape[1]))
+        # assert (np.abs(np.linalg.det(Q))-1) < TOL
+        return Q,dims
 
     def find_high_symmetry_directions(self,Q=None,irrep_lookup=None): # dims=irrep_indices
         """ Need to enumerate all subgroups G_i, of P.  
