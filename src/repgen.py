@@ -2,7 +2,6 @@ from __future__ import absolute_import
 import numpy as np
 from .SymRep import SymRep
 from . import misc
-# from sklearn.preprocessing import normalize
 import itertools
 
 def generate_2D_triangle_cartesian_representation():
