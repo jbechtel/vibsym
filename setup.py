@@ -17,6 +17,5 @@ setuptools.setup(
     description="A small symmetry package for 2D molecules",
     url="https://github.com/jbechtel/vibsym",
     packages=setuptools.find_packages(),
-    package_dir={"": "src"},
     python_requires='==3.7.2',
 )
