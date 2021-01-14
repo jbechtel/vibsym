@@ -8,16 +8,13 @@ author: Jake Vanderplas
 email: vanderplas@astro.washington.edu
 website: http://jakevdp.github.com
 license: BSD
-Please feel free to use and modify this, but keep the above information. Thanks!
 
 """
 
+import matplotlib
+
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-
-
-import vibsym as vs
-import numpy as np
 import vibsym as vs
 import numpy as np
 
@@ -159,7 +156,8 @@ ani = animation.FuncAnimation(fig, animate, frames=600,
 # the video can be embedded in html5.  You may need to adjust this for
 # your system: for more information, see
 # http://matplotlib.sourceforge.net/api/animation_api.html
-ani.save('normal_modes.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
+# ani.save('normal_modes.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
+# ani.save('normal_modes.mp4', fps=30)
 plt.tight_layout()
 #ani.save('normal_modes.gif', fps=120,writer='imagemagick')
 

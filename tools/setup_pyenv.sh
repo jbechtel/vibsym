@@ -1,6 +1,6 @@
 #! /bin/bash
 
-PYTHON_VERSION=3.7.2
+PYTHON_VERSION=3.8.1
 VENV_NAME=venv.vibsym
 
 pyenv install $PYTHON_VERSION
