@@ -7,10 +7,10 @@ from .repgen import trans_rota_basis_2D
 
 @attr.s
 class Molecule:
-    coords: np.array
-    rep: SymRep
+    coords: np.ndarray = attr.ib()
+    rep: SymRep = attr.ib()
 
-    def find_normal_modes(self) -> T.Tuple[np.ndarray,T.Sequence]:
+    def find_normal_modes(self) -> T.Tuple[np.ndarray, T.Sequence]:
         """ Block diagonalizes and reorients sym-adapted basis of self.rep
 
         :return: Symmetry-adapted basis vectors as columns in matrix Q and
