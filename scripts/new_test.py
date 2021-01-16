@@ -6,7 +6,7 @@ import matplotlib.animation as animation
 
 #------------------------------------------------------------
 np.set_printoptions(precision=14,suppress=True)
-mol = vs.
+mol = vs.example_reps.get_example
 # find sym ops from coordinates
 # rep = vs.SymRep(coordinates=init_state)
 # just build ops directly
