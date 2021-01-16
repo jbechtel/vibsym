@@ -19,15 +19,15 @@ class Molecule:
         :return: Symmetry-adapted basis vectors as columns in matrix Q and
             a list of the size of the subsapce dimensions
         """
-        logger.info(" is REP a group: {}".format(self.rep.is_group()))
+        logger.debug(" is REP a group: {}".format(self.rep.is_group()))
         trans_rota_Q = trans_rota_basis_2D(self.coords)
-        logger.info('trQ  = {}'.format(trans_rota_Q))
-        logger.info(' is big rep a group? {}'.format(self.rep.is_group()))
+        logger.debug('trQ  = {}'.format(trans_rota_Q))
+        logger.debug(' is big rep a group? {}'.format(self.rep.is_group()))
         Q, dims = self.rep.block_diagonalize(trans_rota_Q)
-        logger.info(f'Q:\n{Q}')
-        logger.info(f'dims:\n{dims}')
-        logger.info("dims : {}".format(dims))
+        logger.debug(f'Q:\n{Q}')
+        logger.debug(f'dims:\n{dims}')
+        logger.debug("dims : {}".format(dims))
         subspaces, Q = self.rep.find_high_symmetry_directions(Q, dims)
-        logger.info("Q:\n{}".format(Q))
-        logger.info("Q.T @ Q :\n{}".format(Q.T @ Q))
+        logger.debug("Q:\n{}".format(Q))
+        logger.debug("Q.T @ Q :\n{}".format(Q.T @ Q))
         return Q, dims

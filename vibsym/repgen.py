@@ -19,20 +19,20 @@ def generate_2D_triangle_cartesian_representation():
     cart_rep= rota_mats + refl_mats
     #cart_rep= rota_mats
     cartSymRep = SymRep(cart_rep)
-    logger.info('is cart rep a group? {}'.format(cartSymRep.is_group()))
+    logger.debug('is cart rep a group? {}'.format(cartSymRep.is_group()))
     for i,op in enumerate(cart_rep):
-        logger.info("cart op #{}:\n{}".format(i,op))
-    logger.info(' mult table for cart rep\n{}'.format(cartSymRep.multiplication_table()))
+        logger.debug("cart op #{}:\n{}".format(i,op))
+    logger.debug(' mult table for cart rep\n{}'.format(cartSymRep.multiplication_table()))
     perm_rep = [generate_permutation_matrix(perm) for perm in permutations]
     permSymRep = SymRep(perm_rep)
-    logger.info('is perm rep a group? {}'.format(permSymRep.is_group()))
-    logger.info(' mult table for perm rep\n{}'.format(permSymRep.multiplication_table()))
+    logger.debug('is perm rep a group? {}'.format(permSymRep.is_group()))
+    logger.debug(' mult table for perm rep\n{}'.format(permSymRep.multiplication_table()))
     for i,op in enumerate(perm_rep):
-        logger.info("perm op #{}:\n{}".format(i,op))
+        logger.debug("perm op #{}:\n{}".format(i,op))
     tri_rep = permuted_direct_sum(cart_rep, perm_rep)
     triSymRep = SymRep(tri_rep)
-    logger.info(' mult table for tri rep\n{}'.format(triSymRep.multiplication_table()))
-     
+    logger.debug(' mult table for tri rep\n{}'.format(triSymRep.multiplication_table()))
+
     return tri_rep
 
 def generate_2D_square_cartesian_representation():
@@ -47,20 +47,20 @@ def generate_2D_square_cartesian_representation():
     cart_rep= rota_mats + refl_mats
     #cart_rep= rota_mats
     cartSymRep = SymRep(cart_rep)
-    logger.info('is cart rep a group? {}'.format(cartSymRep.is_group()))
+    logger.debug('is cart rep a group? {}'.format(cartSymRep.is_group()))
     for i,op in enumerate(cart_rep):
-        logger.info("cart op #{}:\n{}".format(i,op))
-    logger.info(' mult table for cart rep\n{}'.format(cartSymRep.multiplication_table()))
+        logger.debug("cart op #{}:\n{}".format(i,op))
+    logger.debug(' mult table for cart rep\n{}'.format(cartSymRep.multiplication_table()))
     perm_rep = [generate_permutation_matrix(perm) for perm in permutations]
     permSymRep = SymRep(perm_rep)
-    logger.info('is perm rep a group? {}'.format(permSymRep.is_group()))
-    logger.info(' mult table for perm rep\n{}'.format(permSymRep.multiplication_table()))
+    logger.debug('is perm rep a group? {}'.format(permSymRep.is_group()))
+    logger.debug(' mult table for perm rep\n{}'.format(permSymRep.multiplication_table()))
     for i,op in enumerate(perm_rep):
-        logger.info("perm op #{}:\n{}".format(i,op))
+        logger.debug("perm op #{}:\n{}".format(i,op))
     tri_rep = permuted_direct_sum(cart_rep, perm_rep)
     triSymRep = SymRep(tri_rep)
-    logger.info(' mult table for tri rep\n{}'.format(triSymRep.multiplication_table()))
-     
+    logger.debug(' mult table for tri rep\n{}'.format(triSymRep.multiplication_table()))
+
     return tri_rep
 
 def generate_2D_cartesian_representation(permutations,rotations,reflections):
@@ -75,20 +75,20 @@ def generate_2D_cartesian_representation(permutations,rotations,reflections):
     cart_rep= rota_mats + refl_mats
     #cart_rep= rota_mats
     cartSymRep = SymRep(cart_rep)
-    logger.info('is cart rep a group? {}'.format(cartSymRep.is_group()))
+    logger.debug('is cart rep a group? {}'.format(cartSymRep.is_group()))
     for i,op in enumerate(cart_rep):
-        logger.info("cart op #{}:\n{}".format(i,op))
-    logger.info(' mult table for cart rep\n{}'.format(cartSymRep.multiplication_table()))
+        logger.debug("cart op #{}:\n{}".format(i,op))
+    logger.debug(' mult table for cart rep\n{}'.format(cartSymRep.multiplication_table()))
     perm_rep = [generate_permutation_matrix(perm) for perm in permutations]
     permSymRep = SymRep(perm_rep)
-    logger.info('is perm rep a group? {}'.format(permSymRep.is_group()))
-    logger.info(' mult table for perm rep\n{}'.format(permSymRep.multiplication_table()))
+    logger.debug('is perm rep a group? {}'.format(permSymRep.is_group()))
+    logger.debug(' mult table for perm rep\n{}'.format(permSymRep.multiplication_table()))
     for i,op in enumerate(perm_rep):
-        logger.info("perm op #{}:\n{}".format(i,op))
+        logger.debug("perm op #{}:\n{}".format(i,op))
     tri_rep = permuted_direct_sum(cart_rep, perm_rep)
     triSymRep = SymRep(tri_rep)
-    logger.info(' mult table for tri rep\n{}'.format(triSymRep.multiplication_table()))
-     
+    logger.debug(' mult table for tri rep\n{}'.format(triSymRep.multiplication_table()))
+
     return tri_rep
 
 
@@ -119,16 +119,16 @@ def generate_all_permutation_matrices(n):
     return all_perm_mats
 
 def permuted_direct_sum(cart_rep, perm_rep):
-    full_rep = [np.kron(perm, cart) for perm,cart in zip( perm_rep,cart_rep)] 
+    full_rep = [np.kron(perm, cart) for perm,cart in zip( perm_rep,cart_rep)]
     return full_rep
 
 def trans_rota_basis_2D(p):
-    # define points 
-    logger.info(f'points: \n{p}')
+    # define points
+    logger.debug(f'points: \n{p}')
     #p = [[1.,1.],[-1.,1.],[-1.,-1.],[1.,-1]]
     # unit translations in x and y
     trans = [ [ 1.0, 0],[0.,1.]]
-    # small rotation about z 
+    # small rotation about z
     #rota = generate_2D_rotation(.00001) # this is wrong
     # this is a counter clockwise infinitesimal rotation
     rota = np.array([ [0,-1.],[1.,0]])
@@ -139,21 +139,21 @@ def trans_rota_basis_2D(p):
     for t in trans:
         Qt.append(t*len(p))
 
-    # now we want to apply the rotation to each of the coordinate vectors, and find the vectors that 
-    # connect the original coordinate to the rotated coordinate. This gives the 
+    # now we want to apply the rotation to each of the coordinate vectors, and find the vectors that
+    # connect the original coordinate to the rotated coordinate. This gives the
     # displacement field associated with a rotation
     rotated_p = [ np.dot(np.array(orig),rota.T) for orig in p]
     Rt=[]
     for rp,op in zip(rotated_p,p):
         #Rt.extend(rp - np.array(op))
         Rt.extend(rp)
-    logger.info('Rt=\n{}'.format(Rt))
-    logger.info(f'Qt before Rt: {Qt}')
+    logger.debug('Rt=\n{}'.format(Rt))
+    logger.debug(f'Qt before Rt: {Qt}')
     #Rt = flatten(Rt)
     Qt.append(Rt)
     # Qt.append([direction for atom in p for direction in atom])
     Q = np.array(Qt).T
-    logger.info('Q=\n{}'.format(Q))
+    logger.debug('Q=\n{}'.format(Q))
     return Q
 
 

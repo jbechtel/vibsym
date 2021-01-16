@@ -12,11 +12,11 @@ def random_full_rank_sym_mat(dim):
     A = np.random.rand(*shape)
     A =  0.5*(A + A.T)
     A = A + dim*np.eye(dim)
-    logger.info("Matrix rank of A: {}".format(np.linalg.matrix_rank(A)))
-    logger.info("Is A symmetric??? {}".format(np.allclose(A,A.T)))
-    logger.info("A")
-    logger.info(A)
-    logger.info("Max difference A-A.T = {}".format(np.abs(A.T-A).max()))
+    logger.debug("Matrix rank of A: {}".format(np.linalg.matrix_rank(A)))
+    logger.debug("Is A symmetric??? {}".format(np.allclose(A,A.T)))
+    logger.debug("A")
+    logger.debug(A)
+    logger.debug("Max difference A-A.T = {}".format(np.abs(A.T-A).max()))
     
     return A
 
