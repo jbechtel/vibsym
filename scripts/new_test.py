@@ -1,35 +1,18 @@
-import vibsym as vs
+from vibsym.example_reps import get_example_molecule, ExampleMoleculeType
+from vibsym.repgen import trans_rota_basis_2D
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+# ------------------------------------------------------------
+np.set_printoptions(precision=14, suppress=True)
+mol = get_example_molecule(ExampleMoleculeType.SQUARE)
 
-#------------------------------------------------------------
-np.set_printoptions(precision=14,suppress=True)
-mol = vs.example_reps.get_example
-# find sym ops from coordinates
-# rep = vs.SymRep(coordinates=init_state)
-# just build ops directly
-rep = vs.SymRep(vs.repgen.generate_2D_cartesian_representation(permutations,rotations,reflections))
-print(" is REP a group: {}".format(rep.is_group()))
-trans_rota_Q = vs.repgen.trans_rota_basis_2D(init_state)
-# for col_index in range(trans_rota_Q.shape[1]):
-#     fig,ax = plt.subplots(1)
-#     print("trans_rota\n{}".format(trans_rota_Q))
-#     for ss,p in zip(trans_rota_Q[:,col_index].reshape(trans_rota_Q.shape[0]//2,2),init_state):
-#         print(f'p:\n{p}')
-#         print(f'ss:\n{ss}')
-#         ax.quiver(p[0],p[1],ss[0],ss[1],scale=6)
-#         ax.scatter(p[0],p[1])
-#     ax.set_xlim([-2,2])
-#     ax.set_ylim([-2,2])
-#     plt.tight_layout()
-#     plt.savefig(f'trans_rota_subspace_{col_index}.png')
-#     plt.show()
+print(" is REP a group: {}".format(mol.rep.is_group()))
+trans_rota_Q = trans_rota_basis_2D(mol.coords)
 print('trQ  = {}'.format(trans_rota_Q))
-#exit()
-print(' is big rep a group? {}'.format(rep.is_group()))
-Q,dims = rep.block_diagonalize(trans_rota_Q)
+print(' is big rep a group? {}'.format(mol.rep.is_group()))
+Q, dims = mol.rep.block_diagonalize(trans_rota_Q)
 print(f'Q:\n{Q}')
 print(f'dims:\n{dims}')
 # Q = np.append(Q,trans_rota_Q[:,-1][:,None],1)
@@ -37,7 +20,7 @@ print(f'dims:\n{dims}')
 print("dims : {}".format(dims))
 find_high_sym = True
 if find_high_sym:
-    subspaces,newQ = rep.find_high_symmetry_directions(Q,dims)
+    subspaces, newQ = rep.find_high_symmetry_directions(Q, dims)
     Q = newQ
     #subgroups = rep.find_all_subgroups()
     #print(" all subgroups:\n {}".format(subgroups))
@@ -58,61 +41,64 @@ if find_high_sym:
 print("Q:\n{}".format(Q))
 print("Q.T @ Q :\n{}".format(Q.T @ Q ))
 
+
 class Molecule:
     def __init__(self,
-                 init_state = [[1, 0, 0, -1],
-                               [-0.5, 0.5, 0.5, 0.5],
-                               [-0.5, -0.5, -0.5, 0.5]],
-                 bounds = [-2, 2, -2, 2],
-                 size = 0.04,
-                 freq = 5,
-                 Q = None):
-        self.init_state =np.array(init_state) 
-        self.Q =q 
+                 init_state=[[1, 0, 0, -1],
+                             [-0.5, 0.5, 0.5, 0.5],
+                             [-0.5, -0.5, -0.5, 0.5]],
+                 bounds=[-2, 2, -2, 2],
+                 size=0.04,
+                 freq=5,
+                 Q=None):
+        self.init_state = np.array(init_state)
+        self.Q = q
         self.shape = self.init_state.shape
         self.state = self.init_state.copy()
-        self.size=size
-        self.freq= freq
+        self.size = size
+        self.freq = freq
         self.time_elapsed = 0
 
     def step(self, dt):
         """step once by dt seconds"""
         self.time_elapsed += dt
-        
+
         # update positions
-        self.state =  self.init_state + self.Q*np.sin(-self.freq*self.time_elapsed)
+        self.state = self.init_state + self.Q * np.sin(
+            -self.freq * self.time_elapsed)
+
 
 modes = np.arange(Q.shape[1])
 
-init_state = np.array(init_state)
+init_state = np.array(mol.coords)
 boxes = []
-for mode in modes: 
-    q = np.reshape(Q[:,mode],init_state.shape)
+for mode in modes:
+    q = np.reshape(Q[:, mode], init_state.shape)
     boxes.append(Molecule(init_state, Q=q))
 
-dt = 1. / 30 # 30fps
-#------------------------------------------------------------
+dt = 1. / 30  # 30fps
+# ------------------------------------------------------------
 # set up figure and animation
-#fig = plt.figure()
+# fig = plt.figure()
 nqs = Q.shape[1]
-fig, axes = plt.subplots(1, Q.shape[1],figsize=(nqs,nqs//2))
-#fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+fig, axes = plt.subplots(1, Q.shape[1], figsize=(nqs, nqs // 2))
+# fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 # particles holds the locations of the particles
 particles = []
-for i,ax in enumerate(axes):
-    for j in range(dims[i]-1):
+for i, ax in enumerate(axes):
+    for j in range(dims[i] - 1):
         next(ax._get_lines.prop_cycler)
 
-for i,ax in enumerate(axes):
-    #ax.xaxis.set_ticklabels([])
-    #ax.yaxis.set_ticklabels([])
+for i, ax in enumerate(axes):
+    # ax.xaxis.set_ticklabels([])
+    # ax.yaxis.set_ticklabels([])
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     l, = ax.plot([], [], 'o', markersize=1)
     particles.append(l)
     ax.set_aspect('equal')
-    ax.set_xlim(-4,4)
-    ax.set_ylim(-4,4)
+    ax.set_xlim(-4, 4)
+    ax.set_ylim(-4, 4)
 
 
 def init():
@@ -147,7 +133,6 @@ interval = 1000 * dt - (t1 - t0)
 ani = animation.FuncAnimation(fig, animate, frames=600,
                               interval=interval, blit=True, init_func=init)
 
-
 # save the animation as an mp4.  This requires ffmpeg or mencoder to be
 # installed.  The extra_args ensure that the x264 codec is used, so that
 # the video can be embedded in html5.  You may need to adjust this for
@@ -162,4 +147,3 @@ plt.tight_layout()
 # ani.save('normal_modes.gif', writer='imagemagick')
 
 plt.show()
-
