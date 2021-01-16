@@ -29,3 +29,6 @@ def normalize_matrix(A):
 
 def is_zero_matrix(A):
     return np.allclose(A, np.zeros(A.shape), rtol=RTOL, atol=ATOL)
+
+def is_orthogonal_matrix(A):
+    return np.allclose(A.T @ A, np.eye(A.shape[1]), rtol=RTOL, atol=ATOL)
