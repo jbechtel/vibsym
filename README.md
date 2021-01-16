@@ -12,7 +12,7 @@ Use `bash ./tools/setup_pyenv.sh` to install the correct version of python and t
 ## Usage
 
 The `SymRep` class contains the most important algorithms and can be imported via 
-```
+```python
 from vibsym.SymRep import SymRep
 ```
 
@@ -23,6 +23,21 @@ The symmetry adapted basis can be reoriented within each subspace to align with 
 These methods are wrapped wrapped by the method `SymRep.find_normal_modes()`
 
 Make a plot of an example molecule's normal modes using `vibsym.plotter.plot_normal_modes`
+
+Also checkout `runs/run_example.py` which contains the following example:
+```python
+from vibsym.plots import plot_normal_modes
+from vibsym.example_reps import get_example_molecule, ExampleMoleculeType
+import logging
+
+logger = logging.getLogger('vibsym')
+logger.setLevel(logging.INFO)
+
+mol = get_example_molecule(ExampleMoleculeType.SQUARE)
+Q, dims = mol.find_normal_modes()
+plot_normal_modes(mol.coords, Q, dims)
+
+```
 
 
 
