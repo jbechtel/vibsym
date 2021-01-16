@@ -1,5 +1,4 @@
 from vibsym.example_reps import get_example_molecule, ExampleMoleculeType
-from vibsym.repgen import trans_rota_basis_2D
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -7,42 +6,9 @@ import matplotlib.animation as animation
 # ------------------------------------------------------------
 np.set_printoptions(precision=14, suppress=True)
 mol = get_example_molecule(ExampleMoleculeType.SQUARE)
+Q = mol.find_normal_modes()
 
-print(" is REP a group: {}".format(mol.rep.is_group()))
-trans_rota_Q = trans_rota_basis_2D(mol.coords)
-print('trQ  = {}'.format(trans_rota_Q))
-print(' is big rep a group? {}'.format(mol.rep.is_group()))
-Q, dims = mol.rep.block_diagonalize(trans_rota_Q)
-print(f'Q:\n{Q}')
-print(f'dims:\n{dims}')
-# Q = np.append(Q,trans_rota_Q[:,-1][:,None],1)
-# dims.append(max(dims)+1)
-print("dims : {}".format(dims))
-find_high_sym = True
-if find_high_sym:
-    subspaces, newQ = rep.find_high_symmetry_directions(Q, dims)
-    Q = newQ
-    #subgroups = rep.find_all_subgroups()
-    #print(" all subgroups:\n {}".format(subgroups))
-    fig,ax = plt.subplots(1)
-    print("subspaces\n{}".format(subspaces))
-    for ss in subspaces:
-        if ss.shape[0]>1:
-            for row in ss.T:
-
-                #dot = np.dot(ss[:,0]/np.linalg.norm(ss[:,0]),ss[:,1]/np.linalg.norm(ss[:,1]))
-                #print(" dot product = {}".format(dot))
-                ax.quiver([0],[0],row[0],row[1],scale=4)
-                #ax.plot(ss[0,:],ss[1,:])
-    plt.savefig('high_sym.png')
-    plt.show()
-
-
-print("Q:\n{}".format(Q))
-print("Q.T @ Q :\n{}".format(Q.T @ Q ))
-
-
-class Molecule:
+class PointCloud:
     def __init__(self,
                  init_state=[[1, 0, 0, -1],
                              [-0.5, 0.5, 0.5, 0.5],
@@ -52,7 +18,7 @@ class Molecule:
                  freq=5,
                  Q=None):
         self.init_state = np.array(init_state)
-        self.Q = q
+        self.Q = Q
         self.shape = self.init_state.shape
         self.state = self.init_state.copy()
         self.size = size
@@ -74,7 +40,7 @@ init_state = np.array(mol.coords)
 boxes = []
 for mode in modes:
     q = np.reshape(Q[:, mode], init_state.shape)
-    boxes.append(Molecule(init_state, Q=q))
+    boxes.append(PointCloud(init_state, Q=q))
 
 dt = 1. / 30  # 30fps
 # ------------------------------------------------------------

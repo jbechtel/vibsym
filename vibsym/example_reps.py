@@ -1,20 +1,13 @@
-import attr
 import numpy as np
 from enum import IntEnum, auto
 from .repgen import generate_2D_cartesian_representation
-from .SymRep import SymRep
+from .Molecule import Molecule
 
 
 class ExampleMoleculeType(IntEnum):
     EQUILATERAL_TRIANGLE = auto()
     HEXAGON = auto()
     SQUARE = auto()
-
-
-@attr.s
-class Molecule:
-    coords: np.array
-    rep: SymRep
 
 
 _EXAMPLE_MOLECULES = {
