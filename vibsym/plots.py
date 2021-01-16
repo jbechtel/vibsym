@@ -2,7 +2,9 @@ import numpy as np
 import typing as T
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import logging
 
+logger = logging.getLogger(__name__)
 
 class PointCloud:
     def __init__(self,

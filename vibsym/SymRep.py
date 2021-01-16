@@ -2,6 +2,9 @@ import numpy as np
 from . import repgen 
 from . import misc 
 import itertools
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SymRep(object):
     """ 
@@ -46,17 +49,17 @@ class SymRep(object):
             # get null space of U
             W = u[:,trans_rota_subspace.shape[1]:]
             # this should be orthogonal
-            print(' DOT between W.T @ trans_rota_subspace \n{}'.format(W.T @ trans_rota_subspace))
+            logger.info(' DOT between W.T @ trans_rota_subspace \n{}'.format(W.T @ trans_rota_subspace))
             assert misc.is_zero_matrix(W.T @ trans_rota_subspace), 'complement not orthogonal to trans_rota_subspace'
-            print('W shape trans_rota = {}'.format(W.shape))
+            logger.info('W shape trans_rota = {}'.format(W.shape))
             # this is a coordinate transformation that makes a random full rank matrix 
             # in the space of purely deformational displacements .
             tA = W @ misc.random_full_rank_sym_mat(W.shape[1]) @ W.T
             tA_rank = np.linalg.matrix_rank(tA)
-            print("Matrix rank of tA: {}".format(tA_rank))
+            logger.info("Matrix rank of tA: {}".format(tA_rank))
             assert tA_rank == W.shape[1]
-            print("tA")
-            print(tA)
+            logger.info("tA")
+            logger.info(tA)
             num_dofs = W.shape[1]
         else:
             tA = misc.random_full_rank_sym_mat(self.dim)
@@ -67,65 +70,65 @@ class SymRep(object):
         Qt=[]
         dims = []
         count = 1
-        print(f'num_dofs: \n{num_dofs}')
+        logger.info(f'num_dofs: \n{num_dofs}')
         while len(Qt) < num_dofs:
-            print(f'len(Qt): {len(Qt)}')
+            logger.info(f'len(Qt): {len(Qt)}')
             
             # why  divide by shape?
             A = self.reynolds(tA)  
-            print(' is A symmetric after Reynolds?')
-            print("Matrix rank of A: {}".format(np.linalg.matrix_rank(A, tol=TOL)))
-            print("Is A symmetric??? {}".format(np.allclose(A,A.T)))
-            print("A")
-            print(A)
-            print("trans_rota_subspace")
-            print(trans_rota_subspace)
-            print("Max difference A-A.T = {}".format(np.abs(A.T-A).max()))
-            print('is A invariant? {}'.format(self.is_invariant(A)))
-            print('trans_rota_Q.T @ A: \n{}'.format(trans_rota_subspace.T @ A))
+            logger.info(' is A symmetric after Reynolds?')
+            logger.info("Matrix rank of A: {}".format(np.linalg.matrix_rank(A, tol=TOL)))
+            logger.info("Is A symmetric??? {}".format(np.allclose(A,A.T)))
+            logger.info("A")
+            logger.info(A)
+            logger.info("trans_rota_subspace")
+            logger.info(trans_rota_subspace)
+            logger.info("Max difference A-A.T = {}".format(np.abs(A.T-A).max()))
+            logger.info('is A invariant? {}'.format(self.is_invariant(A)))
+            logger.info('trans_rota_Q.T @ A: \n{}'.format(trans_rota_subspace.T @ A))
 
             # eigenvalues, D, and eigenbasis q
             D,q = np.linalg.eigh(A) 
-            print('matrix_rank of q {}'.format(np.linalg.matrix_rank(q)))
+            logger.info('matrix_rank of q {}'.format(np.linalg.matrix_rank(q)))
             # find the counts of unique eigenvalues
             # trying to find those grops that span a subspace 
             u, indices = np.unique(np.around(D,6), return_inverse=True)
             # reverse the order of the eigenvalues and indices to go from largest to smallest
             u = u[::-1]
             indices = indices.max() - indices
-            print('u')
-            print(u)
-            print('indices')
-            print(indices)
+            logger.info('u')
+            logger.info(u)
+            logger.info('indices')
+            logger.info(indices)
             for i,val in enumerate(u):
                 if abs(val)<TOL:
                     continue
                 else:
-                    print('val {}'.format(val))
-                    print('np.where(D==val) {}'.format(np.where(indices==i)[0]))
-                    print('q')
-                    print(q)
-                    print('q.T @ q\n{}'.format(q.T @ q))
-                    print('is q orthogonal? {}'.format(misc.is_orthogonal_matrix(q)))
+                    logger.info('val {}'.format(val))
+                    logger.info('np.where(D==val) {}'.format(np.where(indices==i)[0]))
+                    logger.info('q')
+                    logger.info(q)
+                    logger.info('q.T @ q\n{}'.format(q.T @ q))
+                    logger.info('is q orthogonal? {}'.format(misc.is_orthogonal_matrix(q)))
                     V = q[:,np.where(indices==i)[0]]
-                    print('V')
-                    print(V)
-                    print('is V orthogonal? {}'.format(misc.is_orthogonal_matrix(V)))
+                    logger.info('V')
+                    logger.info(V)
+                    logger.info('is V orthogonal? {}'.format(misc.is_orthogonal_matrix(V)))
                     temp_rep = SymRep([ V.T @ op @ V for op in self.full_rep ])
                     temp_rep.pretty_print_full()
                     if not temp_rep.is_reducible():
-                        print(f'len(V.T):\n{len(V.T)}')
-                        print(f'V.T:\n{V.T}')
+                        logger.info(f'len(V.T):\n{len(V.T)}')
+                        logger.info(f'V.T:\n{V.T}')
                         for row in V.T:
                             Qt.append(row)
-                        print(f'count: {count}')
-                        print(f'curr indices: {len(np.where(indices==i)[0])}')
+                        logger.info(f'count: {count}')
+                        logger.info(f'curr indices: {len(np.where(indices==i)[0])}')
                         dims.extend([count]*len(np.where(indices==i)[0]))
                         #dims.append(V.shape[1])
                         count += 1
             Q = np.array(Qt).T
-            print('Q \n{}'.format(Q))
-            print('matrix rank Q {}'.format(np.linalg.matrix_rank(Q)))
+            logger.info('Q \n{}'.format(Q))
+            logger.info('matrix rank Q {}'.format(np.linalg.matrix_rank(Q)))
             # exit()
             if (np.linalg.matrix_rank(Q) < num_dofs) and  (np.linalg.matrix_rank(Q) > 0):
                 u,s,vh = np.linalg.svd(Q)
@@ -156,7 +159,7 @@ class SymRep(object):
         block_rep = [ Q.T @ op @ Q for op in self.full_rep]  
         # visualize blockdiagonalized representation for debugging  
         for op in block_rep:
-            print(" op in block_rep : \n{}\n".format(op))
+            logger.info(" op in block_rep : \n{}\n".format(op))
             assert np.abs(np.linalg.det(op)) - 1 < TOL
 
         assert SymRep(block_rep).is_group()
@@ -164,7 +167,7 @@ class SymRep(object):
         # subgroups is a list of list of indices into self.full_rep
         # that form a subgroup
         subgroups = self.find_all_subgroups() 
-        print(len(subgroups))
+        logger.info(len(subgroups))
 
         # this is an awkward counter that counts the entries in irrep_lookup
         # likely, another container is perferred to irrep_lookup.
@@ -176,8 +179,8 @@ class SymRep(object):
         # a 1-D irrep at index 0, then a 2D irrep 
         # spanned by normal modes 1 & 2, then a 1D
         # irrep spanned by normal mode 3.
-        # print("dims: {}".format(dims))
-        print("irrep_lookup: {}".format(irrep_lookup))
+        # logger.info("dims: {}".format(dims))
+        logger.info("irrep_lookup: {}".format(irrep_lookup))
         # get the unique irrep labels 
         # udims = np.unique(dims)
         irrep_labels = np.unique(irrep_lookup)
@@ -192,7 +195,7 @@ class SymRep(object):
             # with the current irrep 
             irrep_inds = sorted(list(np.where(irrep_lookup==irrep_label)[0]))
             # Get normal modes 
-            print("irrep_inds : {}".format(irrep_inds))
+            logger.info("irrep_inds : {}".format(irrep_inds))
             curr_Qs = Q[:,irrep_inds]
             # if the irrep is 1D, then we don't need to 
             # find a high symmetry direction.
@@ -201,52 +204,52 @@ class SymRep(object):
             if len(irrep_inds)==1:
                 for row in curr_Qs.T:
                     newQ.append(row)
-                print('irrep_inds==1')
-                print("newQ : \n{}".format(newQ))
+                logger.info('irrep_inds==1')
+                logger.info("newQ : \n{}".format(newQ))
                 bindex+=1
                 continue
             # subgroup is a list of indices into self.full_rep 
             # or block_rep for that matter
             list_of_orbits = []
             for subgroup in subgroups:
-                print(f'irrep_inds=={len(irrep_inds)}')
+                logger.info(f'irrep_inds=={len(irrep_inds)}')
                 orbits = []
                 sublistQ = []
                 # get this subspace's rep. 
                 curr_subspace_rep =[ op[bindex:bindex+len(irrep_inds),bindex:bindex+len(irrep_inds)] for op in block_rep]
-                print('curr_subspace_rep')
-                print(curr_subspace_rep)
+                logger.info('curr_subspace_rep')
+                logger.info(curr_subspace_rep)
                 assert SymRep(curr_subspace_rep).is_group()
                 curr_subgroup_rep =[ curr_subspace_rep[i] for i in subgroup]
                 assert SymRep(curr_subgroup_rep).is_group()
                 # reynolds
                 np.set_printoptions(precision=8)
-                print(f'curr_subgroup_rep: \n{curr_subgroup_rep}')
+                logger.info(f'curr_subgroup_rep: \n{curr_subgroup_rep}')
                 averaged = np.sum(curr_subgroup_rep, axis=0) / len(curr_subgroup_rep)
-                print(f'averaged: \n{averaged}')
+                logger.info(f'averaged: \n{averaged}')
                 averaged = misc.normalize_matrix(averaged)
-                print(f'normalized averaged: \n{averaged}')
+                logger.info(f'normalized averaged: \n{averaged}')
                 gram = averaged.T @ averaged
-                print(f'gram:\n{gram}')
+                logger.info(f'gram:\n{gram}')
                 # see if there were any non zero directions
                 rank = np.linalg.matrix_rank(averaged, tol=1E-6)
-                print(f'rank: {rank}')
+                logger.info(f'rank: {rank}')
                 if (rank==0) or (rank==averaged.shape[0]):
-                    print('no high sym directions projected out for this subgroup')
+                    logger.info('no high sym directions projected out for this subgroup')
                     continue
                 q,r = np.linalg.qr(averaged)
-                print(f'q: \n{q}')
-                print(f'r: \n{r}')
+                logger.info(f'q: \n{q}')
+                logger.info(f'r: \n{r}')
                 # Row indices of non-zero elements of r give linear independent cols of q. 
                 # row_indices, col_indices = np.where(np.abs(r)>1E-6)
 
                 sublistQ = unique_vectors_from_list([vec for vec in averaged.T])
                 sublistQ = [misc.normalize(vec) for vec in sublistQ if not np.linalg.norm(vec)<self.tol]
 
-                print(f'sublistQ: {sublistQ}')
+                logger.info(f'sublistQ: {sublistQ}')
                 # sublistQ holds all non-zero directions for this subgroup
                 assert len(sublistQ)==rank, 'rank not equal to number of collected vecs'
-                print(sublistQ)
+                logger.info(sublistQ)
                 # for each vec in sublistQ apply the whole group, then get the 
                 # set of distinct vectors. and see if they for a mutually orthogonal set with 
                 # order equal to the dimension of the irrep.
@@ -254,24 +257,24 @@ class SymRep(object):
                 # orthogonal vectors, and then get orthogonal complement. 
                 vec = sublistQ[0]
                 orbit = [rep.dot(vec) for rep in curr_subspace_rep]
-                print(f'orbit:\m: {orbit}')
-                print(f'orbit:\m: {len(orbit)}')
+                logger.info(f'orbit:\m: {orbit}')
+                logger.info(f'orbit:\m: {len(orbit)}')
                 set_orbit = unique_vectors_from_list(orbit)
-                print(f'set(orbit):\m: {set_orbit}')
-                print(f'set(orbit):\m: {len(set_orbit)}')
+                logger.info(f'set(orbit):\m: {set_orbit}')
+                logger.info(f'set(orbit):\m: {len(set_orbit)}')
                 list_of_orbits.append(set_orbit)
                 # if len(set_orbit)==len(irrep_inds):
-                #     print('found good basis')
+                #     logger.info('found good basis')
                 # end for over invariant directions
 
             # now have list of orbits
             # First check if any of them are divisble by the irrep dimension
             orbits_divisible_by_irrep_dim = [o for o in list_of_orbits if len(o) % len(irrep_inds) == 0]
-            print(f'orbits_divisible_by_irrep_dim : \n{orbits_divisible_by_irrep_dim}')
+            logger.info(f'orbits_divisible_by_irrep_dim : \n{orbits_divisible_by_irrep_dim}')
             if len(orbits_divisible_by_irrep_dim)>0:
                 # these must? have orthogonal vecs
                 orthog_bases = [b for o in orbits_divisible_by_irrep_dim for b in get_all_right_handed_2d_bases_from_orbit(o)]
-                print(f'orthog_bases : \n {orthog_bases}')
+                logger.info(f'orthog_bases : \n {orthog_bases}')
                 
                 # collect reoriented Qs
                 reoriented_Qs = []
@@ -286,25 +289,25 @@ class SymRep(object):
                 orthog_basis = orthog_bases[best_basis_index]
                 # subspaces.append(orthog_bases[best_basis_index])
                 # Q_basis = roriented_Qs[best_basis_index])
-                # print("Q_basis : \n{}".format(Q_basis))
-                # print("before newQ : \n{}".format(newQ))
+                # logger.info("Q_basis : \n{}".format(Q_basis))
+                # logger.info("before newQ : \n{}".format(newQ))
                 # for col in Q_basis.T:
                 #     newQ.append(col)
-                # print("after newQ : \n{}".format(newQ))
+                # logger.info("after newQ : \n{}".format(newQ))
             else:
                 # if no orbits are divisible by irrep dim then we have too many
                 # vecs for the space. 
                 # loop through orbits looking for sparsist Q
                 best_vec = None
                 sparse_score = 0
-                print(f'list_of_orbits: \n{list_of_orbits}')
+                logger.info(f'list_of_orbits: \n{list_of_orbits}')
                 for orbit in list_of_orbits:
                     for v in orbit:
                         v = v[:,None]
                         q = curr_Qs @ v
-                        # print(f'roriented q: \n{q}')
+                        # logger.info(f'roriented q: \n{q}')
                         curr_sparse_score = (np.abs(q)<1E-8).sum()
-                        # print(f'curr_sparse_score: \n{curr_sparse_score}')
+                        # logger.info(f'curr_sparse_score: \n{curr_sparse_score}')
                         if curr_sparse_score >= sparse_score:
                             sparse_score = curr_sparse_score
                             best_vec = v
@@ -312,15 +315,15 @@ class SymRep(object):
                  
 
 
-                print(f'best_vec: \n{best_vec}')
+                logger.info(f'best_vec: \n{best_vec}')
                 u,d,v = np.linalg.svd(best_vec)
                 orthog_vec = u[:,-1]
-                print(f'orthog_vec: \n{orthog_vec}')
+                logger.info(f'orthog_vec: \n{orthog_vec}')
                 orthog_basis = np.vstack((best_vec.T,u[:,-1]))# works bc only 2d irreps
 
 
         # end for over irreps 
-            print(f'orthog_basis: \n{orthog_basis}')
+            logger.info(f'orthog_basis: \n{orthog_basis}')
 
 
 
@@ -328,17 +331,17 @@ class SymRep(object):
             orthog_basis = orthog_basis.T
             subspaces.append(orthog_basis)
             Q_basis = curr_Qs @ orthog_basis
-            print("Q_basis : \n{}".format(Q_basis))
-            print("before newQ : \n{}".format(newQ))
+            logger.info("Q_basis : \n{}".format(Q_basis))
+            logger.info("before newQ : \n{}".format(newQ))
             for col in Q_basis.T:
                 newQ.append(col)
-            print("after newQ : \n{}".format(newQ))
+            logger.info("after newQ : \n{}".format(newQ))
             # for v in orbits[selected_orbit]:
             #     subspaces.append(v)
 
         newQ = np.array(newQ).T
-        print("newQ: \n{}".format(newQ))
-        print("newQ.T @ newQ\n{}".format(newQ.T @ newQ))
+        logger.info("newQ: \n{}".format(newQ))
+        logger.info("newQ.T @ newQ\n{}".format(newQ.T @ newQ))
         return subspaces,newQ
 
             
@@ -382,9 +385,9 @@ class SymRep(object):
             while not np.allclose(tmp_op,I,atol=self.tol):
                 tmp_op = tmp_op @ op
                 tmp_cyclic_subgroup.append(self.find_op(tmp_op))
-                #print("tmp_op :\n{}\n".format(tmp_op))
+                #logger.info("tmp_op :\n{}\n".format(tmp_op))
             cyclic_subgroups.add(tuple(sorted(tmp_cyclic_subgroup)))
-        print(" All cyclic subgroup:\n{}".format(cyclic_subgroups))
+        logger.info(" All cyclic subgroup:\n{}".format(cyclic_subgroups))
         subgroups = set()
         for num_cyc_sgs in range(1,len(self.full_rep)):
             cyc_sg_combos = list(itertools.combinations(cyclic_subgroups, num_cyc_sgs))
@@ -393,11 +396,11 @@ class SymRep(object):
                 test_group = [ self.full_rep[j] for j in test_sg_inds]
                 testSymRep = SymRep(test_group)
                 if (testSymRep.is_group()) and (len(test_group)<len(self.full_rep)):
-                    #print("test_sg_inds is a group: {}".format(test_sg_inds))
+                    #logger.info("test_sg_inds is a group: {}".format(test_sg_inds))
                     subgroups.add(tuple(test_sg_inds))
                 #else:
-                #    print("test_sg_inds is NOT a group: {}".format(test_sg_inds))
-        print(" All subgroups: \n{}\n".format(subgroups))
+                #    logger.info("test_sg_inds is NOT a group: {}".format(test_sg_inds))
+        logger.info(" All subgroups: \n{}\n".format(subgroups))
         return subgroups
 
             
@@ -415,8 +418,8 @@ class SymRep(object):
             for d in np.diagonal(op):
                 shur+=d**2
 
-        print(' shur: {}\t group_size: {}'.format(shur,group_size))
-        print(' shur==group_size? {}'.format(abs(group_size-shur)<self.tol))
+        logger.info(' shur: {}\t group_size: {}'.format(shur,group_size))
+        logger.info(' shur==group_size? {}'.format(abs(group_size-shur)<self.tol))
         return abs(group_size-shur)>self.tol
 
 
@@ -427,7 +430,7 @@ class SymRep(object):
         for i,op in enumerate(self.full_rep):
             if not np.allclose(op.T @ A @ op,A,atol=self.tol):
                 is_invariant = False
-                print(' A is not invariant to op #{}\n{}'.format(i,op))
+                logger.info(' A is not invariant to op #{}\n{}'.format(i,op))
         return is_invariant
 
 
@@ -439,7 +442,7 @@ class SymRep(object):
         # tA = np.mean([ op.T @ A @ op for op in self.full_rep ], axis=0)
         # below from A.1 JCT nonlinear elasticity def of invariant A matrix
         tA = np.mean([ op @ A @ op.T for op in self.full_rep ], axis=0)
-        print(' Reynold\'s on A :\n{}'.format(tA))
+        logger.info(' Reynold\'s on A :\n{}'.format(tA))
         return tA
 
     def is_group(self):
@@ -449,7 +452,7 @@ class SymRep(object):
         op_orthogonal = True
         for i,op in enumerate(self.full_rep): 
             if not np.allclose(op.T @ op, I,atol=self.tol):
-                print('non orthogonal op is num {} looks like\n {}'.format(i,op))
+                logger.info('non orthogonal op is num {} looks like\n {}'.format(i,op))
                 op_orthogonal = False
                 return op_orthogonal
             if np.allclose(op,I,atol=self.tol):
@@ -471,24 +474,24 @@ class SymRep(object):
                 for num,fop in enumerate(self.full_rep):
                     if np.allclose(op@sop,fop,atol=self.tol):
                         mtable[i,j] = num
-        print(" mult table is orthogonal? Ans: {}".format(np.allclose(np.eye(len(self.full_rep)),mtable.T @ mtable,atol=self.tol)))
+        logger.info(" mult table is orthogonal? Ans: {}".format(np.allclose(np.eye(len(self.full_rep)),mtable.T @ mtable,atol=self.tol)))
         return mtable
 
     def pretty_print_full(self):
         assert  self.full_rep is not None, "Error: trying to pretty print a representation that hasn't been intialized"
         np.set_printoptions(precision=3,suppress=True)
         for i,op in enumerate(self.full_rep):
-            print(' op #{} \n{}'.format(i,op))
+            logger.info(' op #{} \n{}'.format(i,op))
     def pretty_print_cart(self):
         assert  self.cart_rep is not None, "Error: trying to pretty print a representation that hasn't been intialized"
         np.set_printoptions(precision=3,suppress=True)
         for i,op in enumerate(self.cart_rep):
-            print(' op #{} \n{}'.format(i,op))
+            logger.info(' op #{} \n{}'.format(i,op))
     def pretty_print_perm(self):
         assert  self.perm_rep is not None, "Error: trying to pretty print a representation that hasn't been intialized"
         np.set_printoptions(precision=3,suppress=True)
         for i,op in enumerate(self.perm_rep):
-            print(' op #{} \n{}'.format(i,op))
+            logger.info(' op #{} \n{}'.format(i,op))
 
     def generate_2D_molecule_point_group(self,coordinates):
         """ calculate isometries of 2D molecule 
@@ -542,17 +545,17 @@ class SymRep(object):
                 elif (np.allclose(pairR[:,0],-pairR[:,1])) and (np.linalg.matrix_rank(pairR)<2):
                     rota = repgen.generate_2D_rotation(180.)
                     refl = repgen.generate_2D_reflection(np.arctan(pairR[0,1]/pairR[0,0])/np.pi*180.)
-                    #print("Adding 180 rotation\n{}\n and reflection\n{}\n".format(rota,refl))
+                    #logger.info("Adding 180 rotation\n{}\n and reflection\n{}\n".format(rota,refl))
                     testS.append(rota)
                     testS.append(refl)
                 elif np.linalg.matrix_rank(pairR)<2:
                     continue
                 else:
-                    #print("attempting to map inds:{} to inds:{}".format(inds,tinds))
+                    #logger.info("attempting to map inds:{} to inds:{}".format(inds,tinds))
                     #tmpS = pairR @ swap @ np.linalg.inv(pairR)
                     tmpS = tpairR @ np.linalg.inv(pairR)
                     if np.allclose(tmpS @ tmpS.T,np.eye(2),1E-6):
-                        #print("Found orthogonal transformation matrix:\n{}".format(tmpS))
+                        #logger.info("Found orthogonal transformation matrix:\n{}".format(tmpS))
                         testS.append(tmpS)
                     else: 
                         continue
@@ -563,10 +566,10 @@ class SymRep(object):
         mol_pg = []
         mol_perms = []
         for i,op in enumerate(testS):
-            #print("op #{}\n{}".format(i,op))
+            #logger.info("op #{}\n{}".format(i,op))
             for perm in testP:
-                #print("perm\n{}".format(perm))
-                #print("R\n{}".format(R))
+                #logger.info("perm\n{}".format(perm))
+                #logger.info("R\n{}".format(R))
                 in_group = False
                 for top in mol_pg:
                     if np.allclose(op,top):

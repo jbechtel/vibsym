@@ -3,7 +3,9 @@ from enum import IntEnum, auto
 from .repgen import generate_2D_cartesian_representation
 from .Molecule import Molecule
 from .SymRep import SymRep
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ExampleMoleculeType(IntEnum):
     EQUILATERAL_TRIANGLE = auto()

@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 RTOL = 1E-4
 ATOL = 1E-7
 TOL = 1E-6
@@ -9,11 +12,11 @@ def random_full_rank_sym_mat(dim):
     A = np.random.rand(*shape)
     A =  0.5*(A + A.T)
     A = A + dim*np.eye(dim)
-    print("Matrix rank of A: {}".format(np.linalg.matrix_rank(A)))
-    print("Is A symmetric??? {}".format(np.allclose(A,A.T)))
-    print("A")
-    print(A)
-    print("Max difference A-A.T = {}".format(np.abs(A.T-A).max()))
+    logger.info("Matrix rank of A: {}".format(np.linalg.matrix_rank(A)))
+    logger.info("Is A symmetric??? {}".format(np.allclose(A,A.T)))
+    logger.info("A")
+    logger.info(A)
+    logger.info("Max difference A-A.T = {}".format(np.abs(A.T-A).max()))
     
     return A
 
