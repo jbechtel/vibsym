@@ -59,14 +59,11 @@ def plot_normal_modes(coords: np.ndarray, Q: np.ndarray, dims: T.Sequence,
 
     def init():
         """initialize animation"""
-        global box
         for p in particles:
             p.set_data([], [])
         return particles
-
     def animate(i):
         """perform animation step"""
-        global box, dt, ax, fig
         for box in boxes:
             box.step(dt)
 
